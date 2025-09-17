@@ -392,7 +392,7 @@ restore_from_s3() {
   RESTORE_SLUG="$slug" restore_from_local_slug "$slug"
 }
 
-log_info "HAOS S3 Backup add-on started."
+log_info "S3 Backup Tool add-on started."
 load_overrides
 configure_aws_cli
 
