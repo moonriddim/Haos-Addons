@@ -75,8 +75,10 @@ schema:
   auto_create_bucket: bool?
   backup_password: password?
   partial_include_homeassistant: bool?
-  partial_folders: list(str)?
-  partial_addons: list(str)?
+  partial_folders:
+    - str
+  partial_addons:
+    - str
   webhook_success_url: str?
   webhook_failure_url: str?
   healthcheck_ping_url: str?
