@@ -11,7 +11,6 @@ arch:
   - armv7
   - armhf
   - i386
-image: null
 map:
   - backup:rw
 hassio_api: true
