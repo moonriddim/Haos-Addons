@@ -18,36 +18,53 @@ readonly SUPERVISOR_API="http://supervisor"
 readonly SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN:-}"
 
 # Read configuration
-S3_ENDPOINT_URL=$(bashio::config 's3_endpoint_url')
-S3_REGION_NAME=$(bashio::config 's3_region_name')
-S3_BUCKET=$(bashio::config 's3_bucket')
-S3_PREFIX=$(bashio::config 's3_prefix')
-ACCESS_KEY_ID=$(bashio::config 'access_key_id')
-SECRET_ACCESS_KEY=$(bashio::config 'secret_access_key')
-BACKUP_INTERVAL_HOURS=$(bashio::config 'backup_interval_hours')
-FULL_BACKUP=$(bashio::config 'full_backup')
-BACKUP_NAME_TEMPLATE=$(bashio::config 'backup_name_template')
-VERIFY_SSL=$(bashio::config 'verify_ssl')
-RUN_ON_START=$(bashio::config 'run_on_start')
-RETENTION_KEEP_LAST_S3=$(bashio::config 'retention_keep_last_s3')
-RETENTION_DAYS_S3=$(bashio::config 'retention_days_s3')
-DELETE_LOCAL_AFTER_UPLOAD=$(bashio::config 'delete_local_after_upload')
-FORCE_PATH_STYLE=$(bashio::config 'force_path_style')
-AUTO_CREATE_BUCKET=$(bashio::config 'auto_create_bucket')
-BACKUP_PASSWORD=$(bashio::config 'backup_password')
-PARTIAL_INCLUDE_HASS=$(bashio::config 'partial_include_homeassistant')
-PARTIAL_FOLDERS=$(bashio::config 'partial_folders')
-PARTIAL_ADDONS=$(bashio::config 'partial_addons')
-WEBHOOK_SUCCESS_URL=$(bashio::config 'webhook_success_url')
-WEBHOOK_FAILURE_URL=$(bashio::config 'webhook_failure_url')
-HEALTHCHECK_PING_URL=$(bashio::config 'healthcheck_ping_url')
-S3_SSE=$(bashio::config 's3_sse')
-S3_SSE_KMS_KEY_ID=$(bashio::config 's3_sse_kms_key_id')
-BACKUP_SCHEDULE_CRON=$(bashio::config 'backup_schedule_cron')
-ENABLE_RESTORE_HELPER=$(bashio::config 'enable_restore_helper')
-RESTORE_SLUG=$(bashio::config 'restore_slug')
-RESTORE_FROM_S3_KEY=$(bashio::config 'restore_from_s3_key')
-RESTORE_PASSWORD=$(bashio::config 'restore_password')
+S3_ENDPOINT_URL="$(bashio::config 's3_endpoint_url')"
+S3_REGION_NAME="$(bashio::config 's3_region_name')"
+S3_BUCKET="$(bashio::config 's3_bucket')"
+S3_PREFIX="$(bashio::config 's3_prefix')"
+ACCESS_KEY_ID="$(bashio::config 'access_key_id')"
+SECRET_ACCESS_KEY="$(bashio::config 'secret_access_key')"
+BACKUP_INTERVAL_HOURS="$(bashio::config 'backup_interval_hours')"
+FULL_BACKUP="$(bashio::config 'full_backup')"
+BACKUP_NAME_TEMPLATE="$(bashio::config 'backup_name_template')"
+VERIFY_SSL="$(bashio::config 'verify_ssl')"
+RUN_ON_START="$(bashio::config 'run_on_start')"
+RETENTION_KEEP_LAST_S3="$(bashio::config 'retention_keep_last_s3')"
+RETENTION_DAYS_S3="$(bashio::config 'retention_days_s3')"
+DELETE_LOCAL_AFTER_UPLOAD="$(bashio::config 'delete_local_after_upload')"
+FORCE_PATH_STYLE="$(bashio::config 'force_path_style')"
+AUTO_CREATE_BUCKET="$(bashio::config 'auto_create_bucket')"
+BACKUP_PASSWORD="$(bashio::config 'backup_password')"
+PARTIAL_INCLUDE_HASS="$(bashio::config 'partial_include_homeassistant')"
+PARTIAL_FOLDERS="$(bashio::config 'partial_folders')"
+PARTIAL_ADDONS="$(bashio::config 'partial_addons')"
+WEBHOOK_SUCCESS_URL="$(bashio::config 'webhook_success_url')"
+WEBHOOK_FAILURE_URL="$(bashio::config 'webhook_failure_url')"
+HEALTHCHECK_PING_URL="$(bashio::config 'healthcheck_ping_url')"
+S3_SSE="$(bashio::config 's3_sse')"
+S3_SSE_KMS_KEY_ID="$(bashio::config 's3_sse_kms_key_id')"
+BACKUP_SCHEDULE_CRON="$(bashio::config 'backup_schedule_cron')"
+ENABLE_RESTORE_HELPER="$(bashio::config 'enable_restore_helper')"
+RESTORE_SLUG="$(bashio::config 'restore_slug')"
+RESTORE_FROM_S3_KEY="$(bashio::config 'restore_from_s3_key')"
+RESTORE_PASSWORD="$(bashio::config 'restore_password')"
+
+refresh_runtime_config() {
+  # Optionen neu laden
+  S3_ENDPOINT_URL="$(bashio::config 's3_endpoint_url')"
+  S3_REGION_NAME="$(bashio::config 's3_region_name')"
+  S3_BUCKET="$(bashio::config 's3_bucket')"
+  S3_PREFIX="$(bashio::config 's3_prefix')"
+  ACCESS_KEY_ID="$(bashio::config 'access_key_id')"
+  SECRET_ACCESS_KEY="$(bashio::config 'secret_access_key')"
+  VERIFY_SSL="$(bashio::config 'verify_ssl')"
+  FORCE_PATH_STYLE="$(bashio::config 'force_path_style')"
+  AUTO_CREATE_BUCKET="$(bashio::config 'auto_create_bucket')"
+  BACKUP_INTERVAL_HOURS="$(bashio::config 'backup_interval_hours')"
+  BACKUP_SCHEDULE_CRON="$(bashio::config 'backup_schedule_cron')"
+  # Overrides anwenden (falls vorhanden)
+  load_overrides
+}
 
 load_overrides() {
   local f="/data/overrides.json"
@@ -113,49 +130,58 @@ fi
 
 if [[ -z "$S3_BUCKET" || -z "$ACCESS_KEY_ID" || -z "$SECRET_ACCESS_KEY" ]]; then
   log_err "s3_bucket, access_key_id and secret_access_key are required. Waiting for configuration..."
-  # Prozess am Leben halten, damit Ingress/HTTP-UI verfügbar bleibt
-  while true; do sleep 5; done
-fi
-
-# AWS Umgebungsvariablen setzen
-export AWS_ACCESS_KEY_ID="$ACCESS_KEY_ID"
-export AWS_SECRET_ACCESS_KEY="$SECRET_ACCESS_KEY"
-export AWS_DEFAULT_REGION="$S3_REGION_NAME"
-export AWS_EC2_METADATA_DISABLED=true
-
-# Build optionale AWS CLI Argumente
-AWS_ENDPOINT_ARG=""
-if [[ -n "$S3_ENDPOINT_URL" ]]; then
-  AWS_ENDPOINT_ARG="--endpoint-url $S3_ENDPOINT_URL"
-fi
-AWS_REGION_ARG="--region $S3_REGION_NAME"
-SSL_ARG=""
-if [[ "${VERIFY_SSL,,}" == "false" ]]; then
-  SSL_ARG="--no-verify-ssl"
-fi
-
-# SSE Argumente vorbereiten
-SSE_ARGS=()
-case "${S3_SSE^^}" in
-  "AES256")
-    SSE_ARGS+=("--sse" "AES256")
-    ;;
-  "KMS")
-    SSE_ARGS+=("--sse" "aws:kms")
-    if [[ -n "${S3_SSE_KMS_KEY_ID:-}" ]]; then
-      SSE_ARGS+=("--sse-kms-key-id" "$S3_SSE_KMS_KEY_ID")
+  while true; do
+    sleep 5
+    refresh_runtime_config
+    if [[ -n "$S3_BUCKET" && -n "$ACCESS_KEY_ID" && -n "$SECRET_ACCESS_KEY" ]]; then
+      log_info "Configuration received. Continuing startup."
+      break
     fi
-    ;;
-  *)
-    # NONE oder unbekannt -> keine SSE Args
-    ;;
-esac
+  done
+fi
+
+# AWS Runtime initial setzen
+update_aws_runtime
 
 configure_aws_cli() {
   if [[ "${FORCE_PATH_STYLE,,}" == "true" ]]; then
     log_info "AWS CLI: enable path-style addressing"
     aws configure set s3.addressing_style path >/dev/null 2>&1 || true
   fi
+}
+
+update_aws_runtime() {
+  export AWS_ACCESS_KEY_ID="$ACCESS_KEY_ID"
+  export AWS_SECRET_ACCESS_KEY="$SECRET_ACCESS_KEY"
+  export AWS_DEFAULT_REGION="$S3_REGION_NAME"
+  export AWS_EC2_METADATA_DISABLED=true
+
+  AWS_ENDPOINT_ARG=""
+  if [[ -n "$S3_ENDPOINT_URL" ]]; then
+    AWS_ENDPOINT_ARG="--endpoint-url $S3_ENDPOINT_URL"
+  fi
+  AWS_REGION_ARG="--region $S3_REGION_NAME"
+  SSL_ARG=""
+  if [[ "${VERIFY_SSL,,}" == "false" ]]; then
+    SSL_ARG="--no-verify-ssl"
+  fi
+
+  SSE_ARGS=()
+  case "${S3_SSE^^}" in
+    "AES256")
+      SSE_ARGS+=("--sse" "AES256")
+      ;;
+    "KMS")
+      SSE_ARGS+=("--sse" "aws:kms")
+      if [[ -n "${S3_SSE_KMS_KEY_ID:-}" ]]; then
+        SSE_ARGS+=("--sse-kms-key-id" "$S3_SSE_KMS_KEY_ID")
+      fi
+      ;;
+    *)
+      ;;
+  esac
+
+  configure_aws_cli
 }
 
 # Normalize prefix
