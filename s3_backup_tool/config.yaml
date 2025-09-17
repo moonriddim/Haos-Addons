@@ -25,10 +25,10 @@ watchdog: "tcp://[HOST]:[PORT:8099]"
 options:
   s3_endpoint_url: "https://gateway.storjshare.io"
   s3_region_name: "us-east-1"
-  s3_bucket: ""
+  s3_bucket: null
   s3_prefix: "homeassistant/"
-  access_key_id: ""
-  secret_access_key: ""
+  access_key_id: null
+  secret_access_key: null
   backup_interval_hours: 24
   full_backup: true
   backup_name_template: "HA Backup {date}"

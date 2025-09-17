@@ -12,3 +12,10 @@ RUN find /etc/services.d -type f -name "run" -exec dos2unix -q {} + \
 COPY run.sh /run.sh
 RUN dos2unix -q /run.sh \
  && chmod a+x /run.sh
+RUN set -e; \
+  for f in /run.sh /etc/services.d/*/run $(find /www -type f -name "*.sh" 2>/dev/null); do \
+    [ -f "$f" ] || continue; \
+    if [ "$(head -c 3 "$f" | od -An -t x1 | tr -d ' \n')" = "efbbbf" ]; then \
+      tail -c +4 "$f" > "$f.tmp" && mv "$f.tmp" "$f"; \
+    fi; \
+  done

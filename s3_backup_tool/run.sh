@@ -72,9 +72,37 @@ require_bin jq || exit 1
 require_bin curl || exit 1
 require_bin aws || exit 1
 
+# HTTP-UI früh starten, damit Ingress/Frontend erreichbar ist – auch wenn
+# Konfiguration (S3-Creds) noch fehlt. Zweitstart später wird verhindert.
+if ! pgrep -x lighttpd >/dev/null 2>&1; then
+  port="$(bashio::addon.ingress_port 2>/dev/null || true)"
+  if [[ -z "$port" ]]; then
+    port=8099
+  fi
+  mkdir -p /etc/lighttpd
+  cat > /etc/lighttpd/lighttpd.conf <<EOF
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_dir")
+server.document-root = "/www"
+server.port = $port
+dir-listing.activate = "disable"
+mimetype.assign = (
+  ".html" => "text/html",
+  ".css" => "text/css",
+  ".js" => "application/javascript",
+  ".json" => "application/json",
+  ".png" => "image/png",
+  ".svg" => "image/svg+xml"
+)
+cgi.assign = ( ".sh" => "/bin/sh" )
+url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
+EOF
+  lighttpd -D -f /etc/lighttpd/lighttpd.conf &
+fi
+
 if [[ -z "$S3_BUCKET" || -z "$ACCESS_KEY_ID" || -z "$SECRET_ACCESS_KEY" ]]; then
-  log_err "s3_bucket, access_key_id and secret_access_key are required."
-  exit 1
+  log_err "s3_bucket, access_key_id and secret_access_key are required. Waiting for configuration..."
+  # Prozess am Leben halten, damit Ingress/HTTP-UI verfügbar bleibt
+  while true; do sleep 5; done
 fi
 
 # AWS Umgebungsvariablen setzen
