@@ -47,6 +47,38 @@ document.getElementById('btn-backup').onclick = async ()=>{
   out(r.body || (r.ok?'OK':'Error'));
 }
 
+function renderS3List(json){
+  const t = document.querySelector('#s3-table tbody');
+  const empty = document.getElementById('s3-empty');
+  t.innerHTML = '';
+  const list = (json && json.objects) || [];
+  empty.style.display = list.length? 'none':'block';
+  for(const o of list){
+    const tr = document.createElement('tr');
+    const size = o.Size || o.size || '';
+    const lm = o.LastModified || o.lastModified || '';
+    const key = o.Key || o.key || '';
+    tr.innerHTML = `
+      <td>${key}</td>
+      <td>${size}</td>
+      <td>${lm}</td>
+      <td><button data-key="${key}" class="pick-s3">W4hlen</button> <button data-key="${key}" class="restore-s3">Restore</button></td>
+    `;
+    t.appendChild(tr);
+  }
+  t.querySelectorAll('button.pick-s3').forEach(btn=>{
+    btn.onclick = ()=>{
+      document.getElementById('s3key').value = btn.getAttribute('data-key');
+    };
+  });
+  t.querySelectorAll('button.restore-s3').forEach(btn=>{
+    btn.onclick = async ()=>{
+      document.getElementById('s3key').value = btn.getAttribute('data-key');
+      document.getElementById('btn-restore-s3').click();
+    };
+  });
+}
+
 async function refresh(){
   out('Listing backups...');
   setLoading(true);
@@ -54,6 +86,11 @@ async function refresh(){
   setLoading(false);
   try { renderBackups(JSON.parse(r.body)); } catch(e){ /* ignore */ }
   out(r.body || (r.ok?'OK':'Error'));
+  // S3 Liste optional laden
+  try {
+    const rs3 = await call('/api/list-s3');
+    try{ renderS3List(JSON.parse(rs3.body)); }catch(e){}
+  } catch(e) { /* ignore */ }
 }
 
 document.getElementById('btn-refresh').onclick = refresh;
@@ -88,9 +125,10 @@ document.querySelectorAll('button.preset').forEach(btn=>{
     btn.classList.add('primary');
     selectedPreset = { ep: btn.dataset.ep, rg: btn.dataset.rg, fps: btn.dataset.fps };
     const rs = document.getElementById('region-select');
+    const ri = document.getElementById('region-input');
     const ep = document.getElementById('endpoint-input');
     const fps = document.getElementById('fps-input');
-    if(selectedPreset.rg && selectedPreset.rg !== 'auto'){ rs.value = selectedPreset.rg; }
+    if(selectedPreset.rg && selectedPreset.rg !== 'auto'){ rs.value = selectedPreset.rg; ri.value = selectedPreset.rg; }
     if(selectedPreset.ep){ ep.value = selectedPreset.ep; }
     fps.checked = (selectedPreset.fps === 'true');
   }
@@ -98,9 +136,11 @@ document.querySelectorAll('button.preset').forEach(btn=>{
 
 document.getElementById('btn-apply-preset').onclick = async ()=>{
   const rs = document.getElementById('region-select');
+  const ri = document.getElementById('region-input');
   const ep = document.getElementById('endpoint-input');
   const fps = document.getElementById('fps-input');
-  const region = (rs && rs.value) || (selectedPreset && selectedPreset.rg) || 'us-east-1';
+  // Priorit4t: Freifeld > Dropdown > Preset > Default
+  const region = (ri && ri.value && ri.value.trim()) || (rs && rs.value) || (selectedPreset && selectedPreset.rg) || 'us-east-1';
   const endpoint = (ep && ep.value) || (selectedPreset && selectedPreset.ep) || '';
   const pathStyle = (fps && fps.checked) || (selectedPreset && selectedPreset.fps === 'true') || false;
   out('Applying provider preset...');
