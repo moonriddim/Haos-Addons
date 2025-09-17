@@ -1,14 +1,13 @@
-﻿# HAOS S3 Backup
+﻿# S3 Backup Tool
 
 Simple S3 backups for Home Assistant (Storj, AWS S3, MinIO, R2).
 
 [![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmoonriddim%2FHaos-Addons)
-[![Open this add-on in your Home Assistant](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=haos_s3_backup&repository_url=https%3A%2F%2Fgithub.com%2Fmoonriddim%2FHaos-Addons)
 
 ## Install via Add-on repository
 1. In Home Assistant: Settings → Add-ons → Add-on Store → top-right “Repositories”.
 2. Add this repository URL.
-3. Open “HAOS S3 Backup” in the store, install, configure, start.
+3. Open “S3 Backup Tool” in the store, install, configure, start.
 4. Optional: enable “Show in sidebar” (Ingress UI).
 
 ## Quick start (UI)

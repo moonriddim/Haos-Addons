@@ -1,7 +1,7 @@
-﻿name: "HAOS S3 Backup"
+﻿name: "S3 Backup Tool"
 description: "Home Assistant Addon for S3 Backups compatible with Storj, AWS, MinIO and more"
 version: "0.0.1"
-slug: "haos_s3_backup"
+slug: "s3_backup_tool"
 init: false
 startup: services
 boot: auto
@@ -19,7 +19,7 @@ hassio_role: backup
 ingress: true
 ingress_port: 8099
 panel_icon: mdi:cloud-upload
-panel_title: S3 Backup
+panel_title: S3 Backup Tool
 watchdog: true
 
 # Standardoptionen (können im Add-on UI überschrieben werden)
