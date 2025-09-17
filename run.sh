@@ -49,6 +49,20 @@ RESTORE_SLUG=$(bashio::config 'restore_slug')
 RESTORE_FROM_S3_KEY=$(bashio::config 'restore_from_s3_key')
 RESTORE_PASSWORD=$(bashio::config 'restore_password')
 
+load_overrides() {
+  local f="/data/overrides.json"
+  if [[ -f "$f" ]]; then
+    local ep rg fps
+    ep=$(jq -r '.s3_endpoint_url // empty' "$f" 2>/dev/null || true)
+    rg=$(jq -r '.s3_region_name // empty' "$f" 2>/dev/null || true)
+    fps=$(jq -r '.force_path_style // empty' "$f" 2>/dev/null || true)
+    if [[ -n "$ep" ]]; then S3_ENDPOINT_URL="$ep"; fi
+    if [[ -n "$rg" ]]; then S3_REGION_NAME="$rg"; fi
+    if [[ -n "$fps" ]]; then FORCE_PATH_STYLE="$fps"; fi
+    log_info "Applied provider overrides from /data/overrides.json"
+  fi
+}
+
 if [[ -z "$SUPERVISOR_TOKEN" ]]; then
   log_err "SUPERVISOR_TOKEN not set. Are we running under Supervisor?"
   exit 1
@@ -379,6 +393,7 @@ restore_from_s3() {
 }
 
 log_info "HAOS S3 Backup add-on started."
+load_overrides
 configure_aws_cli
 
 # One-shot Modus, wenn via Cron gestartet

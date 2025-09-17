@@ -10,6 +10,8 @@ body{font-family:Inter,system-ui,Arial,sans-serif;margin:0;background:#0b111b;co
 label{display:block;margin-bottom:6px;color:#8aa4ff}
 .row{display:flex;gap:8px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+button.preset{background:#20304a}
+button.preset:hover{background:#2a3c5e}
 input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #20304a;background:#0b1324;color:#e8eeff}
 button{background:#3459e6;border:0;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer}
 button.primary{background:#4b6cff}

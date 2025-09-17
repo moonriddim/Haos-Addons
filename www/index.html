@@ -38,6 +38,29 @@
     </section>
 
     <section class="panel">
+      <h2>Providers</h2>
+      <div class="grid">
+        <div class="row">
+          <button class="preset" title="Storj S3 Gateway (endpoint + region)" data-ep="https://gateway.storjshare.io" data-rg="us-east-1" data-fps="false">Storj</button>
+          <button class="preset" title="AWS S3 global endpoint (set your region)" data-ep="https://s3.amazonaws.com" data-rg="us-east-1" data-fps="false">AWS S3</button>
+          <button class="preset" title="Replace <accountid> with your R2 account ID" data-ep="https://<accountid>.r2.cloudflarestorage.com" data-rg="auto" data-fps="false">Cloudflare R2</button>
+          <button class="preset" title="Set your MinIO endpoint; path-style required" data-ep="https://minio.local" data-rg="us-east-1" data-fps="true">MinIO</button>
+          <button class="preset" title="Wasabi S3 endpoint (us-east-1 by default)" data-ep="https://s3.wasabisys.com" data-rg="us-east-1" data-fps="false">Wasabi</button>
+          <button class="preset" title="Choose the region endpoint you use (e.g. nyc3)" data-ep="https://nyc3.digitaloceanspaces.com" data-rg="us-east-1" data-fps="false">DO Spaces</button>
+          <button class="preset" title="Backblaze B2 S3 compatible (set region)" data-ep="https://s3.eu-central-003.backblazeb2.com" data-rg="eu-central-003" data-fps="false">Backblaze B2</button>
+          <button class="preset" title="Hetzner fsn1 region endpoint" data-ep="https://fsn1.your-objectstorage.com" data-rg="fsn1" data-fps="false">Hetzner (fsn1)</button>
+          <button class="preset" title="Hetzner nbg1 region endpoint" data-ep="https://nbg1.your-objectstorage.com" data-rg="nbg1" data-fps="false">Hetzner (nbg1)</button>
+          <button class="preset" title="Hetzner hel1 region endpoint" data-ep="https://hel1.your-objectstorage.com" data-rg="hel1" data-fps="false">Hetzner (hel1)</button>
+        </div>
+        <div class="row">
+          <button id="btn-apply-preset" class="primary">Apply selection</button>
+        </div>
+        <div class="muted">Presets set endpoint/region/path-style. Fill bucket and keys in the add-on configuration.</div>
+        <div class="muted">Notes: Replace placeholders like &lt;accountid&gt; (R2). For Hetzner choose the correct region (fsn1/nbg1/hel1). For MinIO use your actual endpoint and keep path-style enabled.</div>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>Restore</h2>
       <div class="grid">
         <div>

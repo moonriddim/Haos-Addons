@@ -81,3 +81,25 @@ document.getElementById('btn-restore-s3').onclick = async ()=>{
 // initial load
 refresh().catch(()=>{});
 
+let selectedPreset = null;
+document.querySelectorAll('button.preset').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('button.preset').forEach(b=>b.classList.remove('primary'));
+    btn.classList.add('primary');
+    selectedPreset = { ep: btn.dataset.ep, rg: btn.dataset.rg, fps: btn.dataset.fps };
+  }
+});
+
+document.getElementById('btn-apply-preset').onclick = async ()=>{
+  if(!selectedPreset){ out('Select a provider first'); return; }
+  out('Applying provider preset...');
+  setLoading(true);
+  const r = await call('/api/set-overrides', {body: JSON.stringify({
+    s3_endpoint_url: selectedPreset.ep,
+    s3_region_name: selectedPreset.rg,
+    force_path_style: selectedPreset.fps === 'true'
+  })});
+  setLoading(false);
+  out(r.body || (r.ok?'OK':'Error'));
+}
+
