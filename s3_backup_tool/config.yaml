@@ -19,7 +19,7 @@ ingress: true
 ingress_port: 8099
 panel_icon: mdi:cloud-upload
 panel_title: S3 Backup Tool
-watchdog: true
+watchdog: "tcp://[HOST]:[PORT:8099]"
 
 # Standardoptionen (können im Add-on UI überschrieben werden)
 options:
