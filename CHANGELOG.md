@@ -10,3 +10,4 @@
 - Restore helper (local slug or S3 key)
 - Ingress web UI with actions
 - Boot auto-start and watchdog
+- Store assets: icon.png / logo.png (256x256)
