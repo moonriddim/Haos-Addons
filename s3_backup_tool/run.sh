@@ -110,7 +110,7 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
   fi
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<EOF
-server.modules = ("mod_access", "mod_alias", "mod_cgi")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = $port
 mimetype.assign = (
@@ -123,6 +123,7 @@ mimetype.assign = (
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
+url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/\$1.sh" )
 EOF
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 fi
@@ -525,7 +526,7 @@ start_http_ui() {
   log_info "Starting HTTP UI on port $port"
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<EOF
-server.modules = ("mod_access", "mod_alias", "mod_cgi")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = $port
 mimetype.assign = (
@@ -538,6 +539,7 @@ mimetype.assign = (
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
+url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/\$1.sh" )
 EOF
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 }
