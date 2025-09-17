@@ -113,7 +113,6 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
 server.modules = ("mod_access", "mod_alias", "mod_cgi")
 server.document-root = "/www"
 server.port = $port
-dir-listing.activate = "disable"
 mimetype.assign = (
   ".html" => "text/html",
   ".css" => "text/css",
@@ -123,7 +122,7 @@ mimetype.assign = (
   ".svg" => "image/svg+xml"
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
-url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/\$1.sh" )
+alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 EOF
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 fi
@@ -140,8 +139,7 @@ if [[ -z "$S3_BUCKET" || -z "$ACCESS_KEY_ID" || -z "$SECRET_ACCESS_KEY" ]]; then
   done
 fi
 
-# AWS Runtime initial setzen
-update_aws_runtime
+# (AWS Runtime wird nach load_overrides/configure_aws_cli initial gesetzt)
 
 configure_aws_cli() {
   if [[ "${FORCE_PATH_STYLE,,}" == "true" ]]; then
@@ -495,6 +493,7 @@ restore_from_s3() {
 log_info "S3 Backup Tool add-on started."
 load_overrides
 configure_aws_cli
+update_aws_runtime
 
 # One-shot Modus, wenn via Cron gestartet
 if [[ "${1:-}" == "--oneshot" ]]; then
@@ -529,7 +528,6 @@ start_http_ui() {
 server.modules = ("mod_access", "mod_alias", "mod_cgi")
 server.document-root = "/www"
 server.port = $port
-dir-listing.activate = "disable"
 mimetype.assign = (
   ".html" => "text/html",
   ".css" => "text/css",
@@ -539,7 +537,7 @@ mimetype.assign = (
   ".svg" => "image/svg+xml"
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
-url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/\$1.sh" )
+alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 EOF
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 }
