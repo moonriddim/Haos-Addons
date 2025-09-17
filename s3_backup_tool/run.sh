@@ -110,7 +110,7 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
   fi
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<EOF
-server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_dir")
+server.modules = ("mod_access", "mod_alias", "mod_cgi")
 server.document-root = "/www"
 server.port = $port
 dir-listing.activate = "disable"
@@ -148,6 +148,40 @@ configure_aws_cli() {
     log_info "AWS CLI: enable path-style addressing"
     aws configure set s3.addressing_style path >/dev/null 2>&1 || true
   fi
+}
+
+update_aws_runtime() {
+  export AWS_ACCESS_KEY_ID="$ACCESS_KEY_ID"
+  export AWS_SECRET_ACCESS_KEY="$SECRET_ACCESS_KEY"
+  export AWS_DEFAULT_REGION="$S3_REGION_NAME"
+  export AWS_EC2_METADATA_DISABLED=true
+
+  AWS_ENDPOINT_ARG=""
+  if [[ -n "$S3_ENDPOINT_URL" ]]; then
+    AWS_ENDPOINT_ARG="--endpoint-url $S3_ENDPOINT_URL"
+  fi
+  AWS_REGION_ARG="--region $S3_REGION_NAME"
+  SSL_ARG=""
+  if [[ "${VERIFY_SSL,,}" == "false" ]]; then
+    SSL_ARG="--no-verify-ssl"
+  fi
+
+  SSE_ARGS=()
+  case "${S3_SSE^^}" in
+    "AES256")
+      SSE_ARGS+=("--sse" "AES256")
+      ;;
+    "KMS")
+      SSE_ARGS+=("--sse" "aws:kms")
+      if [[ -n "${S3_SSE_KMS_KEY_ID:-}" ]]; then
+        SSE_ARGS+=("--sse-kms-key-id" "$S3_SSE_KMS_KEY_ID")
+      fi
+      ;;
+    *)
+      ;;
+  esac
+
+  configure_aws_cli
 }
 
 update_aws_runtime() {
@@ -492,7 +526,7 @@ start_http_ui() {
   log_info "Starting HTTP UI on port $port"
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<EOF
-server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_dir")
+server.modules = ("mod_access", "mod_alias", "mod_cgi")
 server.document-root = "/www"
 server.port = $port
 dir-listing.activate = "disable"
