@@ -112,7 +112,7 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
 server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
-server.port = $port
+server.port = __PORT__
 mimetype.assign = (
   ".html" => "text/html",
   ".css" => "text/css",
@@ -126,6 +126,7 @@ alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
+  sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 fi
 
@@ -529,7 +530,7 @@ start_http_ui() {
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
 server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
-server.port = $port
+server.port = __PORT__
 mimetype.assign = (
   ".html" => "text/html",
   ".css" => "text/css",
@@ -543,6 +544,7 @@ alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
+  sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 }
 
