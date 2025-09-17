@@ -87,17 +87,44 @@ document.querySelectorAll('button.preset').forEach(btn=>{
     document.querySelectorAll('button.preset').forEach(b=>b.classList.remove('primary'));
     btn.classList.add('primary');
     selectedPreset = { ep: btn.dataset.ep, rg: btn.dataset.rg, fps: btn.dataset.fps };
+    const rs = document.getElementById('region-select');
+    const ep = document.getElementById('endpoint-input');
+    const fps = document.getElementById('fps-input');
+    if(selectedPreset.rg && selectedPreset.rg !== 'auto'){ rs.value = selectedPreset.rg; }
+    if(selectedPreset.ep){ ep.value = selectedPreset.ep; }
+    fps.checked = (selectedPreset.fps === 'true');
   }
 });
 
 document.getElementById('btn-apply-preset').onclick = async ()=>{
-  if(!selectedPreset){ out('Select a provider first'); return; }
+  const rs = document.getElementById('region-select');
+  const ep = document.getElementById('endpoint-input');
+  const fps = document.getElementById('fps-input');
+  const region = (rs && rs.value) || (selectedPreset && selectedPreset.rg) || 'us-east-1';
+  const endpoint = (ep && ep.value) || (selectedPreset && selectedPreset.ep) || '';
+  const pathStyle = (fps && fps.checked) || (selectedPreset && selectedPreset.fps === 'true') || false;
   out('Applying provider preset...');
   setLoading(true);
   const r = await call('/api/set-overrides', {body: JSON.stringify({
-    s3_endpoint_url: selectedPreset.ep,
-    s3_region_name: selectedPreset.rg,
-    force_path_style: selectedPreset.fps === 'true'
+    s3_endpoint_url: endpoint,
+    s3_region_name: region,
+    force_path_style: pathStyle
+  })});
+  setLoading(false);
+  out(r.body || (r.ok?'OK':'Error'));
+}
+
+document.getElementById('btn-apply-credentials').onclick = async ()=>{
+  const bkt = document.getElementById('bucket-input').value.trim();
+  const ak = document.getElementById('ak-input').value.trim();
+  const sk = document.getElementById('sk-input').value.trim();
+  if(!bkt || !ak || !sk){ out('Please enter bucket, access key and secret'); return; }
+  out('Applying credentials...');
+  setLoading(true);
+  const r = await call('/api/set-overrides', {body: JSON.stringify({
+    s3_bucket: bkt,
+    access_key_id: ak,
+    secret_access_key: sk
   })});
   setLoading(false);
   out(r.body || (r.ok?'OK':'Error'));

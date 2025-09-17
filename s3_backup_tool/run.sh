@@ -52,13 +52,25 @@ RESTORE_PASSWORD=$(bashio::config 'restore_password')
 load_overrides() {
   local f="/data/overrides.json"
   if [[ -f "$f" ]]; then
-    local ep rg fps
+    local ep rg fps bkt pfx ak sk vssl acb
     ep=$(jq -r '.s3_endpoint_url // empty' "$f" 2>/dev/null || true)
     rg=$(jq -r '.s3_region_name // empty' "$f" 2>/dev/null || true)
     fps=$(jq -r '.force_path_style // empty' "$f" 2>/dev/null || true)
+    bkt=$(jq -r '.s3_bucket // empty' "$f" 2>/dev/null || true)
+    pfx=$(jq -r '.s3_prefix // empty' "$f" 2>/dev/null || true)
+    ak=$(jq -r '.access_key_id // empty' "$f" 2>/dev/null || true)
+    sk=$(jq -r '.secret_access_key // empty' "$f" 2>/dev/null || true)
+    vssl=$(jq -r '.verify_ssl // empty' "$f" 2>/dev/null || true)
+    acb=$(jq -r '.auto_create_bucket // empty' "$f" 2>/dev/null || true)
     if [[ -n "$ep" ]]; then S3_ENDPOINT_URL="$ep"; fi
     if [[ -n "$rg" ]]; then S3_REGION_NAME="$rg"; fi
     if [[ -n "$fps" ]]; then FORCE_PATH_STYLE="$fps"; fi
+    if [[ -n "$bkt" ]]; then S3_BUCKET="$bkt"; fi
+    if [[ -n "$pfx" ]]; then S3_PREFIX="$pfx"; fi
+    if [[ -n "$ak" ]]; then ACCESS_KEY_ID="$ak"; fi
+    if [[ -n "$sk" ]]; then SECRET_ACCESS_KEY="$sk"; fi
+    if [[ -n "$vssl" ]]; then VERIFY_SSL="$vssl"; fi
+    if [[ -n "$acb" ]]; then AUTO_CREATE_BUCKET="$acb"; fi
     log_info "Applied provider overrides from /data/overrides.json"
   fi
 }
@@ -94,7 +106,7 @@ mimetype.assign = (
   ".svg" => "image/svg+xml"
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
-url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
+url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/\$1.sh" )
 EOF
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 fi
@@ -443,6 +455,10 @@ fi
 # HTTP-UI über Ingress starten
 start_http_ui() {
   local port
+  # Nicht mehrfach starten
+  if pgrep -x lighttpd >/dev/null 2>&1; then
+    return
+  fi
   port="$(bashio::addon.ingress_port 2>/dev/null || true)"
   if [[ -z "$port" ]]; then
     port=8099
@@ -463,7 +479,7 @@ mimetype.assign = (
   ".svg" => "image/svg+xml"
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
-url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
+url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/\$1.sh" )
 EOF
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 }

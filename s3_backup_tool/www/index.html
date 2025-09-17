@@ -53,9 +53,26 @@
           <button class="preset" title="Hetzner hel1 region endpoint" data-ep="https://hel1.your-objectstorage.com" data-rg="hel1" data-fps="false">Hetzner (hel1)</button>
         </div>
         <div class="row">
+          <select id="region-select">
+            <option value="us-east-1">us-east-1</option>
+            <option value="us-west-1">us-west-1</option>
+            <option value="eu-central-1">eu-central-1</option>
+            <option value="eu-west-1">eu-west-1</option>
+            <option value="ap-southeast-1">ap-southeast-1</option>
+          </select>
+          <input id="endpoint-input" placeholder="https://s3.amazonaws.com" />
+          <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="fps-input" /> path-style</label>
+        </div>
+        <div class="row">
           <button id="btn-apply-preset" class="primary">Apply selection</button>
         </div>
-        <div class="muted">Presets set endpoint/region/path-style. Fill bucket and keys in the add-on configuration.</div>
+        <div class="muted">Presets set endpoint/region/path-style. You can also customize endpoint/region above. Fill bucket and keys in the add-on configuration or set them below and apply.</div>
+        <div class="row">
+          <input id="bucket-input" placeholder="s3 bucket name" />
+          <input id="ak-input" placeholder="access key id" />
+          <input id="sk-input" placeholder="secret access key" />
+          <button id="btn-apply-credentials">Apply credentials</button>
+        </div>
         <div class="muted">Notes: Replace placeholders like &lt;accountid&gt; (R2). For Hetzner choose the correct region (fsn1/nbg1/hel1). For MinIO use your actual endpoint and keep path-style enabled.</div>
       </div>
     </section>
