@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bashio
+
+# Starte das Add-on Hauptskript
+exec /run.sh
+
+

@@ -1,11 +1,14 @@
 ﻿ARG BUILD_FROM
 FROM $BUILD_FROM
-RUN apk add --no-cache aws-cli jq curl ca-certificates coreutils busybox-suid lighttpd
+RUN apk add --no-cache aws-cli jq curl ca-certificates coreutils busybox-suid lighttpd dos2unix
 COPY www /www
 COPY icon.png /www/icon.png
-RUN chmod -R a+rx /www && find /www/cgi-bin -type f -name "*.sh" -exec chmod a+rx {} +
+RUN chmod -R a+rx /www \
+ && find /www -type f -name "*.sh" -exec dos2unix -q {} +
+# S6-Services via rootfs verwenden, keine CMD-Überschreibung mehr
+COPY rootfs / 
+RUN find /etc/services.d -type f -name "run" -exec dos2unix -q {} + \
+ && chmod a+rx /etc/services.d/*/run
 COPY run.sh /run.sh
-RUN sed -i 's/\r$//' /run.sh \
- && sed -i '1s/^\xEF\xBB\xBF//' /run.sh \
+RUN dos2unix -q /run.sh \
  && chmod a+x /run.sh
-CMD [ "/run.sh" ]
