@@ -1,0 +1,25 @@
+body{font-family:Inter,system-ui,Arial,sans-serif;margin:0;background:#0b111b;color:#d6e1ff}
+.container{max-width:1000px;margin:24px auto;padding:0 16px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.header h1{font-weight:600;font-size:22px;margin:0}
+.header-actions button{margin-left:8px}
+.panel{background:#0f1726;border:1px solid #20304a;border-radius:12px;padding:16px;margin:12px 0}
+.panel h2{margin:0 0 12px;font-size:16px;color:#b9c7ff}
+.muted{color:#7f93d1}
+label{display:block;margin-bottom:6px;color:#8aa4ff}
+.row{display:flex;gap:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #20304a;background:#0b1324;color:#e8eeff}
+button{background:#3459e6;border:0;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer}
+button.primary{background:#4b6cff}
+button:hover{background:#2d4fcb}
+.table-wrap{overflow:auto;border:1px solid #20304a;border-radius:8px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #1a2740;text-align:left;font-size:13px}
+th{color:#9fb1ff}
+.activity{position:relative}
+.spinner{width:18px;height:18px;border:3px solid #2d4fcb;border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite;position:absolute;top:8px;right:8px}
+.hidden{display:none}
+.log{background:#0b1324;border:1px solid #20304a;border-radius:8px;padding:12px;white-space:pre-wrap;min-height:120px}
+@keyframes spin{to{transform:rotate(360deg)}}
+

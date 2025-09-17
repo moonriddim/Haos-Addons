@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HAOS S3 Backup</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>HAOS S3 Backup</h1>
+      <div class="header-actions">
+        <button id="btn-backup" class="primary">Run backup</button>
+        <button id="btn-refresh">Refresh</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <h2>Backups</h2>
+      <div class="table-wrap">
+        <table id="backup-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Slug</th>
+              <th>Date</th>
+              <th>Size</th>
+              <th>Type</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="muted">No backups yet.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Restore</h2>
+      <div class="grid">
+        <div>
+          <label>Slug</label>
+          <div class="row">
+            <input id="slug" placeholder="abcdef12" />
+            <button id="btn-restore-local">Restore</button>
+          </div>
+        </div>
+        <div>
+          <label>S3 key</label>
+          <div class="row">
+            <input id="s3key" placeholder="homeassistant/abcdef12.tar" />
+            <button id="btn-restore-s3">Restore</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Activity</h2>
+      <div id="activity" class="activity">
+        <div class="spinner hidden" id="spinner"></div>
+        <pre id="output" class="log"></pre>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
+
