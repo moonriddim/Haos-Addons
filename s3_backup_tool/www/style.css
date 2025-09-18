@@ -245,6 +245,19 @@ body {
   border-color: var(--border-light);
 }
 
+/* Danger Button: rot mit schwarzem Text */
+.btn-danger {
+  background: #ef4444;
+  color: #111827;
+  border-color: #ef4444;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #0b1220;
+}
+
 .btn-icon {
   width: 16px;
   height: 16px;
