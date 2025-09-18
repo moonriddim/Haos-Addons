@@ -130,6 +130,7 @@ function initializeProviders() {
   const regionInput = document.getElementById('region-input');
   const regionSelect = document.getElementById('region-select');
   const endpointInput = document.getElementById('endpoint-input');
+  const prefixInput = document.getElementById('prefix-input');
   // Beim Initialisieren Standard-Provider anwenden, falls aktiv markiert
   const active = document.querySelector('.provider-card.active');
   if (active) {
@@ -139,14 +140,14 @@ function initializeProviders() {
 
   // Summary anzeigen
   function loadSummaryFromOverrides() {
-    fetch('api/debug-log'); // noop to keep same origin warmed (no auth needed)
-    // Wir lesen direkt die UI-Felder (Overlays spiegeln in run.sh wider). Optional: eigener endpoint
     const bucket = document.getElementById('bucket-input')?.value || '—';
-    const prefix = '—';
+    const prefix = document.getElementById('prefix-input')?.value || '—';
     const endpoint = document.getElementById('endpoint-input')?.value || '—';
-    const region = document.getElementById('region-input')?.value || '—';
-    const sse = document.getElementById('sse-select')?.value || '—';
-    const versioning = document.getElementById('versioning-input')?.checked ? 'aktiv' : 'aus';
+    const activeId = document.querySelector('.provider-card.active')?.dataset.provider || (selectedPreset && selectedPreset.id) || 'aws';
+    const caps = (typeof capsByProvider !== 'undefined' ? capsByProvider[activeId] : null) || {};
+    const region = caps.region ? (document.getElementById('region-input')?.value || '—') : '—';
+    const sse = (Array.isArray(caps.sse) && caps.sse.length > 0) ? (document.getElementById('sse-select')?.value || '—') : '—';
+    const versioning = caps.versioning ? (document.getElementById('versioning-input')?.checked ? 'aktiv' : 'aus') : '—';
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
     set('sum-bucket', bucket);
     set('sum-prefix', prefix);
@@ -162,7 +163,7 @@ function initializeProviders() {
   const btnCancel = document.getElementById('btn-cancel-edit');
   if (btnEdit && btnCancel && summaryCard && editWrapper) {
     btnEdit.onclick = () => { editWrapper.style.display = ''; summaryCard.style.display = 'none'; };
-    btnCancel.onclick = () => { editWrapper.style.display = 'none'; summaryCard.style.display = ''; loadSummaryFromOverrides(); };
+    if (btnCancel) btnCancel.onclick = () => { editWrapper.style.display = 'none'; summaryCard.style.display = ''; loadSummaryFromOverrides(); };
     // Initial anzeigen
     loadSummaryFromOverrides();
   }
@@ -183,6 +184,19 @@ function initializeProviders() {
   if (btnStart) btnStart.onclick = async () => { await call('api/service', { body: JSON.stringify({ cmd: 'start' }) }); setTimeout(refreshServiceStatus, 500); };
   if (btnStop) btnStop.onclick = async () => { await call('api/service', { body: JSON.stringify({ cmd: 'stop' }) }); setTimeout(refreshServiceStatus, 500); };
   setTimeout(refreshServiceStatus, 300);
+
+  const btnSaveClose = document.getElementById('btn-save-close');
+  if (btnSaveClose && summaryCard && editWrapper) {
+    btnSaveClose.onclick = async () => {
+      // Speichere beide Bereiche in einem Schritt
+      await applyProviderSettings();
+      const btnApplyBackup = document.getElementById('btn-apply-backup');
+      if (btnApplyBackup) btnApplyBackup.click();
+      editWrapper.style.display = 'none';
+      summaryCard.style.display = '';
+      loadSummaryFromOverrides();
+    };
+  }
   regionSelect.onchange = () => {
     if (regionSelect.value) { regionInput.value = regionSelect.value; out(`Region übernommen: ${regionSelect.value}`); regionDirty = true; }
   };
@@ -206,29 +220,35 @@ async function applyProviderSettings() {
   const regionInput = document.getElementById('region-input');
   const regionSelect = document.getElementById('region-select');
   const endpointInput = document.getElementById('endpoint-input');
+  const prefixInput = document.getElementById('prefix-input');
   const pathStyleCheckbox = document.getElementById('fps-input');
   const sseSelect = document.getElementById('sse-select');
   const kmsInput = document.getElementById('kms-input');
   const versioningCheckbox = document.getElementById('versioning-input');
 
-  const region = (regionInput.value && regionInput.value.trim()) || regionSelect.value || (selectedPreset && selectedPreset.rg) || 'us-east-1';
+  const providerId = (selectedPreset && selectedPreset.id) || document.querySelector('.provider-card.active')?.dataset.provider || 'aws';
+  const caps = (typeof capsByProvider !== 'undefined' ? capsByProvider[providerId] : null) || {};
+
+  const region = (regionInput.value && regionInput.value.trim()) || regionSelect.value || (selectedPreset && selectedPreset.rg) || '';
   const endpoint = endpointInput.value || (selectedPreset && selectedPreset.ep) || '';
   const pathStyle = pathStyleCheckbox.checked || (selectedPreset && selectedPreset.fps === 'true') || false;
   const sse = sseSelect ? sseSelect.value : '';
   const kms = kmsInput ? kmsInput.value.trim() : '';
   const enableVersioning = !!(versioningCheckbox && versioningCheckbox.checked);
-  if (!region) { out('Fehler: Region ist erforderlich'); return; }
   out('Wende Provider-Einstellungen an...');
   setLoading(true);
   try {
-    const result = await call('api/set-overrides', { body: JSON.stringify({
+    const body = {
       s3_endpoint_url: endpoint,
-      s3_region_name: region,
       force_path_style: pathStyle,
-      s3_sse: sse,
-      s3_sse_kms_key_id: kms,
-      enable_versioning: enableVersioning
-    })});
+      s3_prefix: prefixInput ? prefixInput.value : ''
+    };
+    // Nur senden, was der Provider unterstützt
+    if (caps.region && region) body.s3_region_name = region;
+    if (Array.isArray(caps.sse) && caps.sse.length > 0) body.s3_sse = sse || '';
+    if (caps.kms) body.s3_sse_kms_key_id = kms || '';
+    if (caps.versioning) body.enable_versioning = enableVersioning;
+    const result = await call('api/set-overrides', { body: JSON.stringify(body) });
     out(result.body || (result.ok ? 'Provider-Einstellungen erfolgreich gespeichert!' : 'Fehler beim Speichern'));
   } catch (error) {
     out(`Fehler: ${error.message}`);

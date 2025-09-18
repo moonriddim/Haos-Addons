@@ -182,6 +182,12 @@
                   <p class="form-hint">Die URL deines S3-kompatiblen Endpoints</p>
                 </div>
                 
+                <div class="form-group" id="group-prefix">
+                  <label for="prefix-input" class="form-label">Objekt-Präfix</label>
+                  <input id="prefix-input" type="text" class="form-input" placeholder="homeassistant/" />
+                  <p class="form-hint">Optionales Präfix, das vor Dateinamen gesetzt wird (z. B. homeassistant/).</p>
+                </div>
+
                 <div class="form-group" id="group-region">
                   <label for="region-input" class="form-label">Region <span class="label-required">*</span></label>
                   <div class="input-with-select">
@@ -310,10 +316,8 @@
                 </div>
               </div>
 
-              <div class="form-actions">
-                <button id="btn-apply-backup" class="btn btn-primary">
-                  Backup Einstellungen speichern
-                </button>
+              <div class="form-actions" style="display:none">
+                <button id="btn-apply-backup" class="btn btn-primary">(hidden)</button>
               </div>
             </div>
           </div>
@@ -356,7 +360,7 @@
             </div>
           </div>
           <div class="form-actions" id="provider-edit-toolbar">
-            <button id="btn-cancel-edit" class="btn btn-secondary">Zurück</button>
+            <button id="btn-save-close" class="btn btn-primary" style="width:100%;max-width:420px">Speichern und schließen</button>
           </div>
           </div>
         </div>
