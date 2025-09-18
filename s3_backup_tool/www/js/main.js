@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-backup').onclick = runBackup;
   document.getElementById('btn-refresh').onclick = refresh;
   document.getElementById('btn-apply-preset').onclick = applyProviderSettings;
-  document.getElementById('btn-apply-credentials').onclick = applyCredentials;
+  // Zugangsdaten werden jetzt über "Speichern und schließen" übernommen
   document.getElementById('btn-restore-local').onclick = restoreLocal;
   document.getElementById('btn-restore-s3').onclick = restoreFromS3;
   document.getElementById('btn-debug-log').onclick = showDebugLogs;

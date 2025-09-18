@@ -306,11 +306,7 @@
                 </div>
               </div>
               
-              <div class="form-actions">
-                <button id="btn-apply-credentials" class="btn btn-primary">
-                  Zugangsdaten speichern
-                </button>
-              </div>
+              
               
               <div class="security-note">
                 <svg class="note-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -320,8 +316,9 @@
               </div>
             </div>
           </div>
-          <div class="form-actions" id="provider-edit-toolbar">
-            <button id="btn-save-close" class="btn btn-primary" style="width:100%;max-width:420px">Speichern und schließen</button>
+          <div class="form-actions" id="provider-edit-toolbar" style="justify-content:center">
+            <button id="btn-clear-credentials" class="btn btn-secondary" style="width:100%;max-width:260px;justify-content:center">Zugangsdaten löschen</button>
+            <button id="btn-save-close" class="btn btn-primary" style="width:100%;max-width:420px;justify-content:center">Speichern und schließen</button>
           </div>
           </div>
         </div>
@@ -344,7 +341,7 @@
                     <h4>Lokales Backup</h4>
                   </div>
                   <p class="restore-description">Wiederherstellen über Backup-Slug</p>
-                  <div class="form-group" id="restore-slug-form" style="display:none">
+                  <div class="form-group" id="restore-slug-form">
                     <label for="slug" class="form-label">Backup Slug</label>
                     <div class="input-group">
                       <input id="slug" type="text" class="form-input" placeholder="abcdef12" />
@@ -372,6 +369,7 @@
                       </div>
                     </div>
                   </div>
+                  
                 </div>
                 
                 <div class="restore-option">

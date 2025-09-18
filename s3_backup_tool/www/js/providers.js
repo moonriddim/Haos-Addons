@@ -186,15 +186,46 @@ function initializeProviders() {
   setTimeout(refreshServiceStatus, 300);
 
   const btnSaveClose = document.getElementById('btn-save-close');
+  const btnClearCreds = document.getElementById('btn-clear-credentials');
   if (btnSaveClose && summaryCard && editWrapper) {
     btnSaveClose.onclick = async () => {
       // Speichere beide Bereiche in einem Schritt
       await applyProviderSettings();
+      // Zugangsdaten (Bucket/Keys) zusammen mit Provider-Einstellungen übernehmen
+      try {
+        const body = {
+          s3_bucket: document.getElementById('bucket-input')?.value || '',
+          access_key_id: document.getElementById('ak-input')?.value || '',
+          secret_access_key: document.getElementById('sk-input')?.value || ''
+        };
+        await call('api/set-overrides', { body: JSON.stringify(body) });
+        out('Zugangsdaten gespeichert');
+      } catch (e) {
+        out('Fehler beim Speichern der Zugangsdaten: ' + e.message);
+      }
       const btnApplyBackup = document.getElementById('btn-apply-backup');
       if (btnApplyBackup) btnApplyBackup.click();
       editWrapper.style.display = 'none';
       summaryCard.style.display = '';
       loadSummaryFromOverrides();
+    };
+  }
+  if (btnClearCreds) {
+    btnClearCreds.onclick = async () => {
+      // Zugangsdaten leeren, um Providerwechsel zu ermöglichen
+      try {
+        const body = { s3_bucket: '', access_key_id: '', secret_access_key: '' };
+        await call('api/set-overrides', { body: JSON.stringify(body) });
+        const b = document.getElementById('bucket-input');
+        const ak = document.getElementById('ak-input');
+        const sk = document.getElementById('sk-input');
+        if (b) b.value = '';
+        if (ak) ak.value = '';
+        if (sk) sk.value = '';
+        out('Zugangsdaten gelöscht');
+      } catch (e) {
+        out('Fehler beim Löschen der Zugangsdaten: ' + e.message);
+      }
     };
   }
   regionSelect.onchange = () => {
