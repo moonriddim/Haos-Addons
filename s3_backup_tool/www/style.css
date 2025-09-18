@@ -666,6 +666,11 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Restore UI helpers */
+.restore-selectors { display: grid; gap: 8px; }
+.restore-section { padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+.restore-addons { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); }
+
 /* Activity Log */
 .activity-container {
   border-radius: var(--radius-lg);

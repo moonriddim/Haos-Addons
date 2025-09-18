@@ -146,7 +146,8 @@ url.rewrite-once = (
   "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
   "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
   "^/api/log$" => "/cgi-bin/log.sh",
-  "^/api/debug-log$" => "/cgi-bin/debug-log.sh"
+    "^/api/debug-log$" => "/cgi-bin/debug-log.sh",
+    "^/api/backup-info$" => "/cgi-bin/backup-info.sh"
 )
 
 # Standard-Index und Fallback
@@ -485,10 +486,32 @@ restore_from_local_slug() {
   if [[ -n "${RESTORE_PASSWORD:-}" ]]; then
     password_json=$(jq -n --arg password "$RESTORE_PASSWORD" '{password: $password}')
   fi
-  result=$(curl -sS -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
-                -H "Content-Type: application/json" \
-                -X POST "$SUPERVISOR_API/backups/$slug/restore/full" \
-                -d "$password_json" || true)
+  if [[ "${RESTORE_INCLUDE_HA:-}" != "" || "${RESTORE_ADDONS:-}" != "" || "${RESTORE_FOLDERS:-}" != "" ]]; then
+    # Partielle Wiederherstellung
+    local payload
+    local include_ha_json addons_json folders_json
+    include_ha_json=true
+    if [[ -n "${RESTORE_INCLUDE_HA:-}" ]]; then include_ha_json=${RESTORE_INCLUDE_HA}; fi
+    addons_json="[]"; folders_json="[]"
+    if [[ -n "${RESTORE_ADDONS:-}" ]]; then addons_json=${RESTORE_ADDONS}; fi
+    if [[ -n "${RESTORE_FOLDERS:-}" ]]; then folders_json=${RESTORE_FOLDERS}; fi
+    payload=$(jq -n \
+      --argjson base "$password_json" \
+      --argjson homeassistant "$include_ha_json" \
+      --argjson addons "$addons_json" \
+      --argjson folders "$folders_json" \
+      '$base + {homeassistant: $homeassistant, addons: $addons, folders: $folders}')
+    result=$(curl -sS -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -X POST "$SUPERVISOR_API/backups/$slug/restore/partial" \
+                  -d "$payload" || true)
+  else
+    # Volle Wiederherstellung
+    result=$(curl -sS -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -X POST "$SUPERVISOR_API/backups/$slug/restore/full" \
+                  -d "$password_json" || true)
+  fi
   if [[ "$(jq -r '.result // empty' <<<"$result")" == "ok" ]]; then
     log_info "Restore (local) started."
     return 0
@@ -593,7 +616,8 @@ url.rewrite-once = (
   "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
   "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
   "^/api/log$" => "/cgi-bin/log.sh",
-  "^/api/debug-log$" => "/cgi-bin/debug-log.sh"
+    "^/api/debug-log$" => "/cgi-bin/debug-log.sh",
+    "^/api/backup-info$" => "/cgi-bin/backup-info.sh"
 )
 
 # Standard-Index und Fallback

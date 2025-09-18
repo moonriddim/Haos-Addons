@@ -1,11 +1,60 @@
 // Globale Variablen und Utilities
 let selectedPreset = null;
 let currentTab = 'backups';
+let endpointDirty = false; // wurde Endpoint manuell editiert?
+let regionDirty = false;   // wurde Region manuell editiert?
 
 // Utility-Funktionen
 function resolvePath(path) {
   // Entferne führenden Slash, damit Requests relativ zum Ingress-Pfad erfolgen
   return path.replace(/^\//, '');
+}
+
+function toNumber(val, fallback = 0) {
+  const n = typeof val === 'number' ? val : parseFloat(val);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function parseHumanSizeToBytes(text) {
+  if (text == null) return 0;
+  if (typeof text === 'number') return text; // bereits Bytes
+  const str = String(text).trim();
+  const num = toNumber(str);
+  const lower = str.toLowerCase();
+  if (lower.includes('tb') || lower.endsWith('t')) return Math.round(num * 1024 * 1024 * 1024 * 1024);
+  if (lower.includes('gb') || lower.endsWith('g')) return Math.round(num * 1024 * 1024 * 1024);
+  if (lower.includes('mb') || lower.endsWith('m')) return Math.round(num * 1024 * 1024);
+  if (lower.includes('kb') || lower.endsWith('k')) return Math.round(num * 1024);
+  if (lower.includes('b')) return Math.round(num);
+  // Keine Einheit gefunden: konservativ als MB interpretieren (Supervisor liefert oft MB)
+  return Math.round(num * 1024 * 1024);
+}
+
+function getBackupSizeBytes(backup) {
+  const sizeInBytes = backup && (backup.size_in_bytes ?? backup.sizeInBytes);
+  if (sizeInBytes != null) {
+    const bytes = toNumber(sizeInBytes);
+    if (bytes > 0) return Math.round(bytes);
+  }
+  const size = backup && (backup.size ?? backup.Size);
+  if (size == null) return 0;
+  if (typeof size === 'number') {
+    // Heuristik: Werte < 2.048 deuten i.d.R. auf MB hin; große Werte sind Bytes
+    return Math.round(size < 2048 ? size * 1024 * 1024 : size);
+  }
+  return parseHumanSizeToBytes(size);
+}
+
+function formatBytes(bytes) {
+  const size = toNumber(bytes, 0);
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let unitIndex = 0;
+  let fileSize = size;
+  while (fileSize >= 1024 && unitIndex < units.length - 1) {
+    fileSize /= 1024;
+    unitIndex++;
+  }
+  return `${fileSize.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
 }
 
 async function call(path, opts = {}) {
@@ -93,8 +142,16 @@ function initializeTabs() {
     currentTab = tabId;
     
     // Tab-spezifische Aktionen
-    if (tabId === 'backups') {
+    if (tabId === 'backups' || tabId === 'restore') {
+      // Für Restore auch laden, damit S3-Liste gefüllt wird
       refresh();
+      // Wenn bereits ein Slug gesetzt ist, lade Details zur Vorbelegung
+      if (tabId === 'restore') {
+        const slugInput = document.getElementById('slug');
+        if (slugInput && slugInput.value.trim()) {
+          populateRestoreOptionsFromBackup(slugInput.value.trim());
+        }
+      }
     }
   }
   
@@ -122,24 +179,18 @@ function renderBackups(json) {
   
   for (const backup of list) {
     const tr = document.createElement('tr');
-    const size = backup.size || backup.size_in_bytes || '';
+    const sizeBytes = getBackupSizeBytes(backup);
     const date = backup.date || backup.created || '';
     
     tr.innerHTML = `
       <td><strong>${backup.name || 'Unbekannt'}</strong></td>
       <td><code>${backup.slug || ''}</code></td>
       <td>${formatDate(date)}</td>
-      <td>${formatSize(size)}</td>
+      <td>${formatBytes(sizeBytes)}</td>
       <td><span class="backup-type">${backup.type || 'Vollständig'}</span></td>
       <td class="text-right">
-        <button class="btn btn-secondary btn-sm restore-btn" data-slug="${backup.slug}">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7,10 12,15 17,10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Auswählen
-        </button>
+        <button class="btn btn-secondary btn-sm restore-btn" data-slug="${backup.slug}">Auswählen</button>
+        <button class="btn btn-primary btn-sm restore-now-btn" data-slug="${backup.slug}">Wiederherstellen</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -155,17 +206,18 @@ function renderBackups(json) {
       document.querySelector('[data-tab="restore"]').click();
       
       // Visuelles Feedback
-      btn.innerHTML = '<span>✓ Ausgewählt</span>';
+      btn.textContent = '✓ Ausgewählt';
       setTimeout(() => {
-        btn.innerHTML = `
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7,10 12,15 17,10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Auswählen
-        `;
+        btn.textContent = 'Auswählen';
       }, 2000);
+    };
+  });
+  
+  // Direkt-Wiederherstellen-Buttons
+  tbody.querySelectorAll('.restore-now-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const slug = btn.getAttribute('data-slug');
+      await restoreLocalWithSlug(slug);
     };
   });
 }
@@ -219,6 +271,45 @@ function renderS3List(json) {
   });
 }
 
+// Backup-Details laden und Restore-Checkboxen vorbelegen
+async function populateRestoreOptionsFromBackup(slug) {
+  try {
+    const res = await call('api/backup-info', { body: JSON.stringify({ slug }) });
+    if (!res.ok) return;
+    const info = JSON.parse(res.body);
+    const data = info.data || {};
+    const ha = document.getElementById('restore-ha');
+    if (ha && typeof data.homeassistant === 'boolean') {
+      ha.checked = data.homeassistant;
+    }
+    const knownFolders = ['homeassistant','media','ssl','share'];
+    knownFolders.forEach(f => {
+      const el = document.querySelector(`.restore-folder[value="${f}"]`);
+      if (el) el.checked = Array.isArray(data.folders) ? data.folders.includes(f) : false;
+    });
+    // Add-ons dynamisch anzeigen
+    const addonsListEl = document.getElementById('addons-list');
+    if (addonsListEl) {
+      addonsListEl.innerHTML = '';
+      const addons = Array.isArray(data.addons) ? data.addons : [];
+      if (!addons.length) {
+        addonsListEl.innerHTML = '<div class="text-muted">Keine Add-ons im Backup gefunden.</div>';
+      } else {
+        addons.forEach(a => {
+          const slugVal = a.slug || a;
+          const nameVal = a.name || slugVal;
+          const div = document.createElement('label');
+          div.className = 'checkbox-label';
+          div.innerHTML = `<input type="checkbox" class="form-checkbox restore-addon" value="${slugVal}"> <span class="checkbox-indicator"></span> ${nameVal}`;
+          addonsListEl.appendChild(div);
+        });
+      }
+    }
+  } catch (_) {
+    // still
+  }
+}
+
 // Provider-Karten initialisieren
 function initializeProviders() {
   const providerCards = document.querySelectorAll('.provider-card');
@@ -238,23 +329,20 @@ function initializeProviders() {
         fps: card.dataset.fps
       };
       
-      // Felder ausfüllen (nur wenn leer, um manuelle Eingaben nicht zu überschreiben)
+      // Felder ausfüllen (nur wenn nicht manuell verändert)
       const regionInput = document.getElementById('region-input');
       const regionSelect = document.getElementById('region-select');
       const endpointInput = document.getElementById('endpoint-input');
       const pathStyleCheckbox = document.getElementById('fps-input');
       
-      // Region: nur vorbelegen wenn noch kein Wert eingetragen ist
-      if (selectedPreset.rg && selectedPreset.rg !== 'auto' && !regionInput.value.trim()) {
+      // Region: vorbelegen, solange Nutzer nichts manuell eingegeben hat
+      if (selectedPreset.rg && selectedPreset.rg !== 'auto' && !regionDirty) {
         regionInput.value = selectedPreset.rg;
-        regionSelect.value = selectedPreset.rg;
-      } else if (selectedPreset.rg && selectedPreset.rg !== 'auto') {
-        // Preset als Dropdown-Option markieren, aber Input-Feld nicht überschreiben
         regionSelect.value = selectedPreset.rg;
       }
       
-      // Endpoint: nur vorbelegen wenn leer
-      if (selectedPreset.ep && !endpointInput.value.trim()) {
+      // Endpoint: vorbelegen, solange Nutzer nichts manuell eingegeben hat
+      if (selectedPreset.ep && !endpointDirty) {
         endpointInput.value = selectedPreset.ep;
       }
       
@@ -269,12 +357,14 @@ function initializeProviders() {
   // Region-Input und Select synchronisieren
   const regionInput = document.getElementById('region-input');
   const regionSelect = document.getElementById('region-select');
+  const endpointInput = document.getElementById('endpoint-input');
   
   regionSelect.onchange = () => {
     if (regionSelect.value) {
       regionInput.value = regionSelect.value;
       // Visuelles Feedback für übernommene Region
       out(`Region übernommen: ${regionSelect.value}`);
+      regionDirty = true; // Nutzer hat Region über Dropdown angepasst
     }
   };
   
@@ -282,7 +372,12 @@ function initializeProviders() {
     // Prüfen, ob der Wert in der Select-Liste vorhanden ist
     const option = Array.from(regionSelect.options).find(opt => opt.value === regionInput.value);
     regionSelect.value = option ? regionInput.value : '';
+    regionDirty = true; // Nutzer tippt in Region
   };
+  
+  endpointInput.addEventListener('input', () => {
+    endpointDirty = true; // Nutzer tippt in Endpoint
+  });
   
   // Input-Feld explizit fokussierbar und editierbar machen
   regionInput.removeAttribute('readonly');
@@ -296,6 +391,7 @@ function initializeProviders() {
     e.preventDefault();
     regionInput.focus();
     regionInput.select(); // Text auswählen falls vorhanden
+    // Kein dirty-Flag hier setzen, erst wenn tatsächlich getippt wurde
   });
   
   // Doppelklick für bessere Benutzerfreundlichkeit
@@ -467,14 +563,39 @@ async function restoreLocal() {
     return;
   }
   
+  await restoreLocalWithSlug(slug);
+}
+
+async function restoreLocalWithSlug(slug) {
   out(`Stelle lokales Backup wieder her: ${slug}`);
   setLoading(true);
-  
   try {
+    // Prüfe, ob partielle Auswahl im UI getroffen wurde; wenn nichts gewählt, versuche aus Backup-Info zu laden
+    let includeHA = document.getElementById('restore-ha')?.checked;
+    let folders = Array.from(document.querySelectorAll('.restore-folder:checked')).map(el => el.value);
+    let addons = Array.from(document.querySelectorAll('.restore-addon:checked')).map(el => el.value);
+
+    if (folders.length === 0 && addons.length === 0) {
+      // Backup-Info vom Supervisor holen und Defaults setzen
+      const infoRes = await call('api/backup-info', { body: JSON.stringify({ slug }) });
+      if (infoRes.ok) {
+        try {
+          const info = JSON.parse(infoRes.body);
+          const data = info.data || {};
+          if (typeof includeHA !== 'boolean' && typeof data.homeassistant === 'boolean') includeHA = data.homeassistant;
+          if (Array.isArray(data.folders)) folders = data.folders;
+          if (Array.isArray(data.addons)) addons = data.addons.map(a => (a.slug || a));
+        } catch (_) {}
+      }
+    }
+
+    const payload = { slug };
+    if (typeof includeHA === 'boolean') payload.homeassistant = includeHA;
+    if (folders.length) payload.folders = folders;
+    if (addons.length) payload.addons = addons;
     const result = await call('api/restore-local', {
-      body: JSON.stringify({ slug })
+      body: JSON.stringify(payload)
     });
-    
     out(result.body || (result.ok ? 'Lokales Backup erfolgreich wiederhergestellt!' : 'Fehler bei der Wiederherstellung'));
   } catch (error) {
     out(`Fehler: ${error.message}`);
@@ -482,7 +603,6 @@ async function restoreLocal() {
     setLoading(false);
   }
 }
-
 async function restoreFromS3() {
   const s3key = document.getElementById('s3key').value.trim();
   
@@ -613,6 +733,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('slug').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       restoreLocal();
+    }
+  });
+  document.getElementById('slug').addEventListener('blur', (e) => {
+    const v = e.target.value.trim();
+    if (v) {
+      populateRestoreOptionsFromBackup(v);
     }
   });
   
