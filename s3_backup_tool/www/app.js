@@ -279,10 +279,24 @@ function initializeProviders() {
     regionSelect.value = option ? regionInput.value : '';
   };
   
+  // Input-Feld explizit fokussierbar und editierbar machen
+  regionInput.removeAttribute('readonly');
+  regionInput.removeAttribute('disabled');
+  regionInput.style.pointerEvents = 'auto';
+  regionInput.style.userSelect = 'text';
+  
   // Sicherstellen dass das Input-Feld funktioniert
   regionInput.addEventListener('click', (e) => {
     e.stopPropagation();
+    e.preventDefault();
     regionInput.focus();
+    regionInput.select(); // Text auswählen falls vorhanden
+  });
+  
+  // Doppelklick für bessere Benutzerfreundlichkeit
+  regionInput.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    regionInput.select();
   });
   
   // Placeholder für bessere Benutzerführung dynamisch setzen
@@ -291,19 +305,26 @@ function initializeProviders() {
       regionInput.placeholder = 'z.B. eu-central-1, us-east-1, ap-southeast-1';
     }
     // Debug-Info bei Focus
-    out('✏️ Region-Eingabe aktiv');
+    out('✏️ Region-Eingabe aktiv - jetzt tippen!');
   });
   
   regionInput.addEventListener('blur', () => {
     regionInput.placeholder = 'eu-central-1';
   });
   
-  // Input-Verhalten debuggen
+  // Input-Verhalten debuggen und forcieren
   regionInput.addEventListener('keydown', (e) => {
+    e.stopPropagation();
     // Bestätigung dass Tasteneingaben ankommen
-    if (e.key.length === 1) { // Normale Zeichen
+    if (e.key.length === 1) {
       console.log('Region input: ' + e.key);
+      out(`Eingabe: ${e.key}`);
     }
+  });
+  
+  // Input-Änderungen verfolgen
+  regionInput.addEventListener('input', (e) => {
+    out(`Region geändert: ${regionInput.value}`);
   });
 }
 
