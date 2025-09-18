@@ -101,8 +101,11 @@ require_bin jq || exit 1
 require_bin curl || exit 1
 require_bin aws || exit 1
 
-# HTTP-UI früh starten, damit Ingress/Frontend erreichbar ist – auch wenn
-# Konfiguration (S3-Creds) noch fehlt. Zweitstart später wird verhindert.
+# SUPERVISOR_TOKEN für CGI-Scripts verfügbar machen (Home Assistant Standard)
+echo "$SUPERVISOR_TOKEN" > /tmp/supervisor_token
+chmod 600 /tmp/supervisor_token
+
+# HTTP-UI früh starten, damit Ingress/Frontend erreichbar ist
 if ! pgrep -x lighttpd >/dev/null 2>&1; then
   port="$(bashio::addon.ingress_port 2>/dev/null || true)"
   if [[ -z "$port" ]]; then
@@ -110,7 +113,7 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
   fi
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
-server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite", "mod_setenv")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = __PORT__
 mimetype.assign = (
@@ -121,19 +124,12 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
-
-# Umgebungsvariablen für CGI-Scripts setzen
-setenv.add-environment = (
-  "SUPERVISOR_TOKEN" => "__SUPERVISOR_TOKEN__",
-  "PATH" => "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-)
-
 cgi.assign = ( ".sh" => "/bin/sh" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
-  sed -i "s|__PORT__|${port}|; s|__SUPERVISOR_TOKEN__|${SUPERVISOR_TOKEN}|" /etc/lighttpd/lighttpd.conf
+  sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 fi
 
@@ -528,6 +524,11 @@ start_http_ui() {
   if pgrep -x lighttpd >/dev/null 2>&1; then
     return
   fi
+  
+  # SUPERVISOR_TOKEN für CGI-Scripts verfügbar machen
+  echo "$SUPERVISOR_TOKEN" > /tmp/supervisor_token
+  chmod 600 /tmp/supervisor_token
+  
   port="$(bashio::addon.ingress_port 2>/dev/null || true)"
   if [[ -z "$port" ]]; then
     port=8099
@@ -535,7 +536,7 @@ start_http_ui() {
   log_info "Starting HTTP UI on port $port"
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
-server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite", "mod_setenv")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = __PORT__
 mimetype.assign = (
@@ -546,13 +547,6 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
-
-# Umgebungsvariablen für CGI-Scripts setzen
-setenv.add-environment = (
-  "SUPERVISOR_TOKEN" => "__SUPERVISOR_TOKEN__",
-  "PATH" => "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-)
-
 cgi.assign = ( ".sh" => "/bin/sh" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
