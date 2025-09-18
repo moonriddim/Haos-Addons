@@ -110,7 +110,7 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
   fi
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
-server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite", "mod_setenv")
 server.document-root = "/www"
 server.port = __PORT__
 mimetype.assign = (
@@ -121,12 +121,19 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
+
+# Umgebungsvariablen für CGI-Scripts setzen
+setenv.add-environment = (
+  "SUPERVISOR_TOKEN" => "__SUPERVISOR_TOKEN__",
+  "PATH" => "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+)
+
 cgi.assign = ( ".sh" => "/bin/sh" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
-  sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf
+  sed -i "s|__PORT__|${port}|; s|__SUPERVISOR_TOKEN__|${SUPERVISOR_TOKEN}|" /etc/lighttpd/lighttpd.conf
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
 fi
 
@@ -528,7 +535,7 @@ start_http_ui() {
   log_info "Starting HTTP UI on port $port"
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
-server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite", "mod_setenv")
 server.document-root = "/www"
 server.port = __PORT__
 mimetype.assign = (
@@ -539,6 +546,13 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
+
+# Umgebungsvariablen für CGI-Scripts setzen
+setenv.add-environment = (
+  "SUPERVISOR_TOKEN" => "__SUPERVISOR_TOKEN__",
+  "PATH" => "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+)
+
 cgi.assign = ( ".sh" => "/bin/sh" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
