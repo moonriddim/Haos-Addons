@@ -127,47 +127,19 @@
             </div>
             <div class="card-content">
               <div class="provider-grid">
-                <button class="provider-card" title="Amazon S3 - Global endpoint" data-ep="https://s3.amazonaws.com" data-rg="us-east-1" data-fps="false">
+                <button class="provider-card" title="Amazon S3 - Global endpoint" data-provider="aws" data-ep="https://s3.amazonaws.com" data-rg="us-east-1" data-fps="false">
                   <div class="provider-icon aws"></div>
                   <span class="provider-name">AWS S3</span>
                 </button>
-                
-                <button class="provider-card" title="Cloudflare R2 - Ersetze <accountid> mit deiner R2 Account-ID" data-ep="https://<accountid>.r2.cloudflarestorage.com" data-rg="auto" data-fps="false">
-                  <div class="provider-icon cloudflare"></div>
-                  <span class="provider-name">Cloudflare R2</span>
-                </button>
-                
-                <button class="provider-card" title="Google Cloud Storage S3 kompatibel" data-ep="https://storage.googleapis.com" data-rg="us-east-1" data-fps="false">
+                <button class="provider-card" title="Google Cloud Storage S3 kompatibel" data-provider="gcp" data-ep="https://storage.googleapis.com" data-rg="us-central1" data-fps="false">
                   <div class="provider-icon gcp"></div>
                   <span class="provider-name">Google Cloud</span>
                 </button>
-                
-                <button class="provider-card" title="MinIO - Setze deine eigene MinIO URL" data-ep="https://minio.local" data-rg="us-east-1" data-fps="true">
-                  <div class="provider-icon minio"></div>
-                  <span class="provider-name">MinIO</span>
-                </button>
-                
-                <button class="provider-card" title="Wasabi S3 endpoint" data-ep="https://s3.wasabisys.com" data-rg="us-east-1" data-fps="false">
-                  <div class="provider-icon wasabi"></div>
-                  <span class="provider-name">Wasabi</span>
-                </button>
-                
-                <button class="provider-card" title="DigitalOcean Spaces" data-ep="https://nyc3.digitaloceanspaces.com" data-rg="us-east-1" data-fps="false">
-                  <div class="provider-icon do"></div>
-                  <span class="provider-name">DO Spaces</span>
-                </button>
-                
-                <button class="provider-card" title="Backblaze B2 S3 kompatibel" data-ep="https://s3.eu-central-003.backblazeb2.com" data-rg="eu-central-003" data-fps="false">
-                  <div class="provider-icon backblaze"></div>
-                  <span class="provider-name">Backblaze B2</span>
-                </button>
-                
-                <button class="provider-card" title="Hetzner Object Storage" data-ep="https://fsn1.your-objectstorage.com" data-rg="fsn1" data-fps="false">
+                <button class="provider-card" title="Hetzner Object Storage" data-provider="hetzner" data-ep="https://fsn1.your-objectstorage.com" data-rg="fsn1" data-fps="false">
                   <div class="provider-icon hetzner"></div>
                   <span class="provider-name">Hetzner</span>
                 </button>
-                
-                <button class="provider-card" title="Storj DCS S3 Gateway" data-ep="https://gateway.storjshare.io" data-rg="us-east-1" data-fps="false">
+                <button class="provider-card" title="Storj DCS S3 Gateway" data-provider="storj" data-ep="https://gateway.storjshare.io" data-rg="us-east-1" data-fps="false">
                   <div class="provider-icon storj"></div>
                   <span class="provider-name">Storj</span>
                 </button>
@@ -182,13 +154,13 @@
             </div>
             <div class="card-content">
               <div class="form-grid">
-                <div class="form-group">
+                <div class="form-group" id="group-endpoint">
                   <label for="endpoint-input" class="form-label">Endpoint URL</label>
                   <input id="endpoint-input" type="url" class="form-input" placeholder="https://s3.amazonaws.com" />
                   <p class="form-hint">Die URL deines S3-kompatiblen Endpoints</p>
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group" id="group-region">
                   <label for="region-input" class="form-label">Region <span class="label-required">*</span></label>
                   <div class="input-with-select">
                     <input id="region-input" type="text" class="form-input" placeholder="eu-central-1" tabindex="0" autocomplete="off" />
@@ -205,7 +177,7 @@
                   <p class="form-hint">Gib deine gewünschte Region ein oder wähle aus der Liste</p>
                 </div>
                 
-                <div class="form-group checkbox-group">
+                <div class="form-group checkbox-group" id="group-fps">
                   <label class="checkbox-label">
                     <input type="checkbox" id="fps-input" class="form-checkbox" />
                     <span class="checkbox-indicator"></span>
@@ -214,7 +186,7 @@
                   <p class="form-hint">Erforderlich für MinIO und einige S3-kompatible Services</p>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="group-sse">
                   <label for="sse-select" class="form-label">Server-Side Encryption</label>
                   <select id="sse-select" class="form-select">
                     <option value="">Keine</option>
@@ -224,13 +196,13 @@
                   <p class="form-hint">Aktiviere SSE für hochsichere Speicherung deiner Backups.</p>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="group-kms">
                   <label for="kms-input" class="form-label">KMS Key ID (optional)</label>
                   <input id="kms-input" type="text" class="form-input" placeholder="arn:aws:kms:...:key/uuid" />
                   <p class="form-hint">Nur erforderlich, wenn SSE = KMS verwendet wird.</p>
                 </div>
 
-                <div class="form-group checkbox-group">
+                <div class="form-group checkbox-group" id="group-versioning">
                   <label class="checkbox-label">
                     <input type="checkbox" id="versioning-input" class="form-checkbox" />
                     <span class="checkbox-indicator"></span>
