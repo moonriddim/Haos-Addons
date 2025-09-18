@@ -150,6 +150,23 @@ function initializeProviders() {
     // Initial anzeigen
     loadSummaryFromOverrides();
   }
+
+  // Service-Buttons (Start/Stop/Status)
+  const btnStart = document.getElementById('btn-service-start');
+  const btnStop = document.getElementById('btn-service-stop');
+  const statusEl = document.getElementById('service-status');
+  async function refreshServiceStatus() {
+    try {
+      const res = await call('api/service', { body: JSON.stringify({ cmd: 'status' }) });
+      if (res.ok) {
+        const j = JSON.parse(res.body || '{}');
+        if (statusEl) statusEl.textContent = j.status || 'UNKNOWN';
+      }
+    } catch (_) {}
+  }
+  if (btnStart) btnStart.onclick = async () => { await call('api/service', { body: JSON.stringify({ cmd: 'start' }) }); setTimeout(refreshServiceStatus, 500); };
+  if (btnStop) btnStop.onclick = async () => { await call('api/service', { body: JSON.stringify({ cmd: 'stop' }) }); setTimeout(refreshServiceStatus, 500); };
+  setTimeout(refreshServiceStatus, 300);
   regionSelect.onchange = () => {
     if (regionSelect.value) { regionInput.value = regionSelect.value; out(`Region übernommen: ${regionSelect.value}`); regionDirty = true; }
   };

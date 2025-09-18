@@ -160,7 +160,8 @@ url.rewrite-once = (
   "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
   "^/api/log$" => "/cgi-bin/log.sh",
     "^/api/debug-log$" => "/cgi-bin/debug-log.sh",
-    "^/api/backup-info$" => "/cgi-bin/backup-info.sh"
+    "^/api/backup-info$" => "/cgi-bin/backup-info.sh",
+    "^/api/service$" => "/cgi-bin/service.sh"
 )
 
 # Standard-Index und Fallback
@@ -481,6 +482,53 @@ run_cron_scheduler() {
   crond -f -l 8
 }
 
+SCHEDULER_PID_FILE="/tmp/scheduler.pid"
+
+start_scheduler() {
+  if [[ -f "$SCHEDULER_PID_FILE" ]]; then
+    local pid
+    pid=$(cat "$SCHEDULER_PID_FILE" 2>/dev/null || true)
+    if [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1; then
+      log_info "Scheduler already running (pid=$pid)"
+      return 0
+    fi
+  fi
+  if [[ -n "${BACKUP_SCHEDULE_CRON:-}" ]]; then
+    run_cron_scheduler & echo $! > "$SCHEDULER_PID_FILE"
+    log_info "Started cron scheduler (pid=$(cat "$SCHEDULER_PID_FILE"))"
+  else
+    run_interval_scheduler & echo $! > "$SCHEDULER_PID_FILE"
+    log_info "Started interval scheduler (pid=$(cat "$SCHEDULER_PID_FILE"))"
+  fi
+}
+
+stop_scheduler() {
+  if [[ -f "$SCHEDULER_PID_FILE" ]]; then
+    local pid
+    pid=$(cat "$SCHEDULER_PID_FILE" 2>/dev/null || true)
+    if [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1; then
+      kill "$pid" >/dev/null 2>&1 || true
+      sleep 1
+      if kill -0 "$pid" >/dev/null 2>&1; then kill -9 "$pid" >/dev/null 2>&1 || true; fi
+      log_info "Scheduler stopped (pid=$pid)"
+    fi
+    rm -f "$SCHEDULER_PID_FILE"
+  else
+    log_info "Scheduler not running"
+  fi
+}
+
+scheduler_status() {
+  if [[ -f "$SCHEDULER_PID_FILE" ]]; then
+    local pid
+    pid=$(cat "$SCHEDULER_PID_FILE" 2>/dev/null || true)
+    if [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1; then
+      echo "RUNNING $pid"
+      return 0
+    fi
+  fi
+  echo "STOPPED"
+}
 main_loop() {
   if [[ "${RUN_ON_START,,}" == "true" ]]; then
     [[ -n "${HEALTHCHECK_PING_URL:-}" ]] && curl -fsS "${HEALTHCHECK_PING_URL}/start" >/dev/null 2>&1 || true
@@ -618,6 +666,15 @@ elif [[ "${1:-}" == "--restore" ]]; then
     exit 1
   fi
   exit 0
+elif [[ "${1:-}" == "--start-scheduler" ]]; then
+  start_scheduler
+  exit 0
+elif [[ "${1:-}" == "--stop-scheduler" ]]; then
+  stop_scheduler
+  exit 0
+elif [[ "${1:-}" == "--scheduler-status" ]]; then
+  scheduler_status
+  exit 0
 fi
 
 # HTTP-UI über Ingress starten
@@ -686,4 +743,6 @@ EOF
 
 start_http_ui
 
-main_loop
+main_loop &
+start_scheduler
+wait
