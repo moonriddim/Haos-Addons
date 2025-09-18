@@ -213,6 +213,31 @@
                   </label>
                   <p class="form-hint">Erforderlich für MinIO und einige S3-kompatible Services</p>
                 </div>
+
+                <div class="form-group">
+                  <label for="sse-select" class="form-label">Server-Side Encryption</label>
+                  <select id="sse-select" class="form-select">
+                    <option value="">Keine</option>
+                    <option value="AES256">AES256 (S3-Managed Keys)</option>
+                    <option value="KMS">AWS KMS (kundenverwalteter Schlüssel)</option>
+                  </select>
+                  <p class="form-hint">Aktiviere SSE für hochsichere Speicherung deiner Backups.</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="kms-input" class="form-label">KMS Key ID (optional)</label>
+                  <input id="kms-input" type="text" class="form-input" placeholder="arn:aws:kms:...:key/uuid" />
+                  <p class="form-hint">Nur erforderlich, wenn SSE = KMS verwendet wird.</p>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="versioning-input" class="form-checkbox" />
+                    <span class="checkbox-indicator"></span>
+                    Versionierung im Bucket aktivieren
+                  </label>
+                  <p class="form-hint">Erlaubt mehrere Versionen/Backups mit gleichem Namen aufzubewahren.</p>
+                </div>
               </div>
               
               <div class="form-actions">
@@ -288,8 +313,9 @@
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Auswahl für Wiederherstellung (optional)</label>
-                    <div class="restore-selectors">
+                    <label class="form-label">Auswahl für Wiederherstellung</label>
+                    <div id="restore-placeholder" class="text-muted">Bitte wähle zuerst ein lokales Backup aus der Tabelle oben, oder gib einen Slug ein.</div>
+                    <div id="restore-selection" class="restore-selectors hidden">
                       <label class="checkbox-label">
                         <input type="checkbox" id="restore-ha" class="form-checkbox" checked />
                         <span class="checkbox-indicator"></span>
@@ -297,15 +323,12 @@
                       </label>
                       <div class="restore-section">
                         <div class="text-muted" style="margin: 8px 0 4px;">Ordner</div>
-                        <label class="checkbox-label"><input type="checkbox" value="homeassistant" class="form-checkbox restore-folder" /><span class="checkbox-indicator"></span> Einstellungen und Verlauf</label>
-                        <label class="checkbox-label"><input type="checkbox" value="media" class="form-checkbox restore-folder" /><span class="checkbox-indicator"></span> Medien</label>
-                        <label class="checkbox-label"><input type="checkbox" value="ssl" class="form-checkbox restore-folder" /><span class="checkbox-indicator"></span> SSL-Zertifikate</label>
-                        <label class="checkbox-label"><input type="checkbox" value="share" class="form-checkbox restore-folder" /><span class="checkbox-indicator"></span> Share-Ordner</label>
+                        <div id="folders-list" class="restore-addons"></div>
                       </div>
                       <div class="restore-section">
-                        <div class="text-muted" style="margin: 8px 0 4px;">Add-ons (Slugs)</div>
+                        <div class="text-muted" style="margin: 8px 0 4px;">Add-ons</div>
                         <div id="addons-list" class="restore-addons">
-                          <div class="text-muted">Noch keine Add-ons geladen. Wähle zuerst ein lokales Backup aus der Tabelle oder gib einen Slug ein.</div>
+                          <div class="text-muted">Keine Add-ons im Backup gefunden.</div>
                         </div>
                       </div>
                     </div>

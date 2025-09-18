@@ -43,6 +43,7 @@ WEBHOOK_FAILURE_URL="$(bashio::config 'webhook_failure_url')"
 HEALTHCHECK_PING_URL="$(bashio::config 'healthcheck_ping_url')"
 S3_SSE="$(bashio::config 's3_sse')"
 S3_SSE_KMS_KEY_ID="$(bashio::config 's3_sse_kms_key_id')"
+ENABLE_VERSIONING="$(bashio::config 'enable_versioning')"
 BACKUP_SCHEDULE_CRON="$(bashio::config 'backup_schedule_cron')"
 ENABLE_RESTORE_HELPER="$(bashio::config 'enable_restore_helper')"
 RESTORE_SLUG="$(bashio::config 'restore_slug')"
@@ -79,6 +80,9 @@ load_overrides() {
     sk=$(jq -r '.secret_access_key // empty' "$f" 2>/dev/null || true)
     vssl=$(jq -r '.verify_ssl // empty' "$f" 2>/dev/null || true)
     acb=$(jq -r '.auto_create_bucket // empty' "$f" 2>/dev/null || true)
+  sse=$(jq -r '.s3_sse // empty' "$f" 2>/dev/null || true)
+  kms=$(jq -r '.s3_sse_kms_key_id // empty' "$f" 2>/dev/null || true)
+  ev=$(jq -r '.enable_versioning // empty' "$f" 2>/dev/null || true)
     if [[ -n "$ep" ]]; then S3_ENDPOINT_URL="$ep"; fi
     if [[ -n "$rg" ]]; then S3_REGION_NAME="$rg"; fi
     if [[ -n "$fps" ]]; then FORCE_PATH_STYLE="$fps"; fi
@@ -88,6 +92,9 @@ load_overrides() {
     if [[ -n "$sk" ]]; then SECRET_ACCESS_KEY="$sk"; fi
     if [[ -n "$vssl" ]]; then VERIFY_SSL="$vssl"; fi
     if [[ -n "$acb" ]]; then AUTO_CREATE_BUCKET="$acb"; fi
+  if [[ -n "$sse" ]]; then S3_SSE="$sse"; fi
+  if [[ -n "$kms" ]]; then S3_SSE_KMS_KEY_ID="$kms"; fi
+  if [[ -n "$ev" ]]; then ENABLE_VERSIONING="$ev"; fi
     log_info "Applied provider overrides from /data/overrides.json"
   fi
 }
@@ -367,12 +374,19 @@ upload_to_s3() {
 
 ensure_bucket_exists() {
   if aws s3 ls "s3://$S3_BUCKET" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1; then
+    # Optional: Versionierung sicherstellen, falls gewünscht
+    if [[ "${ENABLE_VERSIONING,,}" == "true" ]]; then
+      aws s3api put-bucket-versioning --bucket "$S3_BUCKET" --versioning-configuration Status=Enabled $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1 || true
+    fi
     return 0
   fi
   if [[ "${AUTO_CREATE_BUCKET,,}" == "true" ]]; then
     log_warn "Bucket not found. Attempting to create: $S3_BUCKET"
     if aws s3 mb "s3://$S3_BUCKET" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1; then
       log_info "Bucket created: $S3_BUCKET"
+      if [[ "${ENABLE_VERSIONING,,}" == "true" ]]; then
+        aws s3api put-bucket-versioning --bucket "$S3_BUCKET" --versioning-configuration Status=Enabled $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1 || true
+      fi
       return 0
     fi
   fi

@@ -204,6 +204,8 @@ function renderBackups(json) {
       
       // Zur Restore-Tab wechseln
       document.querySelector('[data-tab="restore"]').click();
+      // UI-Auswahl sichtbar machen und mit Backup-Details füllen
+      populateRestoreOptionsFromBackup(slug);
       
       // Visuelles Feedback
       btn.textContent = '✓ Ausgewählt';
@@ -278,15 +280,37 @@ async function populateRestoreOptionsFromBackup(slug) {
     if (!res.ok) return;
     const info = JSON.parse(res.body);
     const data = info.data || {};
+    // Platzhalter ausblenden, Auswahl einblenden
+    const placeholder = document.getElementById('restore-placeholder');
+    const selection = document.getElementById('restore-selection');
+    if (placeholder) placeholder.classList.add('hidden');
+    if (selection) selection.classList.remove('hidden');
     const ha = document.getElementById('restore-ha');
     if (ha && typeof data.homeassistant === 'boolean') {
       ha.checked = data.homeassistant;
     }
-    const knownFolders = ['homeassistant','media','ssl','share'];
-    knownFolders.forEach(f => {
-      const el = document.querySelector(`.restore-folder[value="${f}"]`);
-      if (el) el.checked = Array.isArray(data.folders) ? data.folders.includes(f) : false;
-    });
+    // Folders dynamisch rendern, basierend auf den im Backup enthaltenen
+    const foldersList = document.getElementById('folders-list');
+    if (foldersList) {
+      foldersList.innerHTML = '';
+      const folders = Array.isArray(data.folders) ? data.folders : [];
+      if (!folders.length) {
+        foldersList.innerHTML = '<div class="text-muted">Keine Ordner im Backup gefunden.</div>';
+      } else {
+        folders.forEach(f => {
+          const lbl = document.createElement('label');
+          lbl.className = 'checkbox-label';
+          const name = ({
+            homeassistant: 'Einstellungen und Verlauf',
+            media: 'Medien',
+            ssl: 'SSL-Zertifikate',
+            share: 'Share-Ordner'
+          })[f] || f;
+          lbl.innerHTML = `<input type="checkbox" value="${f}" class="form-checkbox restore-folder"> <span class="checkbox-indicator"></span> ${name}`;
+          foldersList.appendChild(lbl);
+        });
+      }
+    }
     // Add-ons dynamisch anzeigen
     const addonsListEl = document.getElementById('addons-list');
     if (addonsListEl) {
@@ -419,6 +443,14 @@ async function runBackup() {
   
   try {
     const result = await call('api/backup');
+    try {
+      if (result.ok) {
+        const json = JSON.parse(result.body || '{}');
+        if (json.s3_key) {
+          out(`Uploaded: s3://${json.s3_key}`);
+        }
+      }
+    } catch (_) {}
     out(result.body || (result.ok ? 'Backup erfolgreich abgeschlossen!' : 'Fehler beim Backup'));
     
     // Refresh nach erfolgreichem Backup
@@ -480,6 +512,9 @@ async function applyProviderSettings() {
   const regionSelect = document.getElementById('region-select');
   const endpointInput = document.getElementById('endpoint-input');
   const pathStyleCheckbox = document.getElementById('fps-input');
+  const sseSelect = document.getElementById('sse-select');
+  const kmsInput = document.getElementById('kms-input');
+  const versioningCheckbox = document.getElementById('versioning-input');
   
   // Priorität: Freitext-Input > Dropdown > Preset > Default
   const region = (regionInput.value && regionInput.value.trim()) || 
@@ -493,6 +528,9 @@ async function applyProviderSettings() {
   const pathStyle = pathStyleCheckbox.checked || 
                    (selectedPreset && selectedPreset.fps === 'true') || 
                    false;
+  const sse = sseSelect ? sseSelect.value : '';
+  const kms = kmsInput ? kmsInput.value.trim() : '';
+  const enableVersioning = !!(versioningCheckbox && versioningCheckbox.checked);
   
   if (!region) {
     out('Fehler: Region ist erforderlich');
@@ -507,7 +545,10 @@ async function applyProviderSettings() {
       body: JSON.stringify({
         s3_endpoint_url: endpoint,
         s3_region_name: region,
-        force_path_style: pathStyle
+        force_path_style: pathStyle,
+        s3_sse: sse,
+        s3_sse_kms_key_id: kms,
+        enable_versioning: enableVersioning
       })
     });
     
