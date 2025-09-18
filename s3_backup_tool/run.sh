@@ -113,7 +113,7 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
   fi
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
-server.modules = ("mod_access", "mod_alias", "mod_cgi")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = __PORT__
 mimetype.assign = (
@@ -125,16 +125,9 @@ mimetype.assign = (
   ".svg" => "image/svg+xml"
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
-# Direkte API-Pfade auf CGI-Scripts
-alias.url = (
-  "/api/backup" => "/www/cgi-bin/backup.sh",
-  "/api/list" => "/www/cgi-bin/list.sh",
-  "/api/list-s3" => "/www/cgi-bin/list-s3.sh", 
-  "/api/restore-local" => "/www/cgi-bin/restore-local.sh",
-  "/api/restore-s3" => "/www/cgi-bin/restore-s3.sh",
-  "/api/set-overrides" => "/www/cgi-bin/set-overrides.sh",
-  "/api/log" => "/www/cgi-bin/log.sh"
-)
+alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
+url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
+url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
   sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
@@ -543,7 +536,7 @@ start_http_ui() {
   log_info "Starting HTTP UI on port $port"
   mkdir -p /etc/lighttpd
   cat > /etc/lighttpd/lighttpd.conf <<'EOF'
-server.modules = ("mod_access", "mod_alias", "mod_cgi")
+server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = __PORT__
 mimetype.assign = (
@@ -555,16 +548,9 @@ mimetype.assign = (
   ".svg" => "image/svg+xml"
 )
 cgi.assign = ( ".sh" => "/bin/sh" )
-# Direkte API-Pfade auf CGI-Scripts
-alias.url = (
-  "/api/backup" => "/www/cgi-bin/backup.sh",
-  "/api/list" => "/www/cgi-bin/list.sh",
-  "/api/list-s3" => "/www/cgi-bin/list-s3.sh", 
-  "/api/restore-local" => "/www/cgi-bin/restore-local.sh",
-  "/api/restore-s3" => "/www/cgi-bin/restore-s3.sh",
-  "/api/set-overrides" => "/www/cgi-bin/set-overrides.sh",
-  "/api/log" => "/www/cgi-bin/log.sh"
-)
+alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
+url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
+url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
   sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf
   lighttpd -D -f /etc/lighttpd/lighttpd.conf &
