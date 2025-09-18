@@ -418,38 +418,38 @@
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">Cloud Backup-Dateien</h3>
-              <p class="card-description">Verfügbare Backups in deinem S3 Bucket</p>
-            </div>
-            <div class="card-content">
-              <div class="table-container">
-                <table id="s3-table" class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Dateiname</th>
-                      <th>Größe</th>
-                      <th>Letzte Änderung</th>
-                      <th class="text-right">Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-                <div id="s3-empty" class="empty-state" style="display:none">
-                  <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
-                  </svg>
-                  <h4>Keine Cloud-Backups gefunden</h4>
-                  <p>Es wurden keine Backup-Dateien in deinem konfigurierten S3 Bucket gefunden.</p>
+                <div class="restore-option">
+                  <div class="restore-header">
+                    <svg class="restore-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+                    </svg>
+                    <h4>Cloud Backup-Dateien</h4>
+                  </div>
+                  <div class="table-container">
+                    <table id="s3-table" class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Dateiname</th>
+                          <th>Größe</th>
+                          <th>Letzte Änderung</th>
+                          <th class="text-right">Aktionen</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                    <div id="s3-empty" class="empty-state" style="display:none">
+                      <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+                      </svg>
+                      <h4>Keine Cloud-Backups gefunden</h4>
+                      <p>Es wurden keine Backup-Dateien in deinem konfigurierten S3 Bucket gefunden.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          
         </div>
 
         <!-- Activity Tab -->

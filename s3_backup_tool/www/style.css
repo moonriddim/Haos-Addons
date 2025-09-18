@@ -588,6 +588,13 @@ body {
   border-bottom: none;
 }
 
+/* Auswahl-Highlighting für Tabellenzeilen */
+.data-table tbody tr.selected {
+  background: rgba(59, 130, 246, 0.18) !important;
+  box-shadow: inset 2px 0 0 var(--primary-500);
+  transition: background var(--transition-fast);
+}
+
 /* Empty States */
 .empty-state {
   text-align: center;

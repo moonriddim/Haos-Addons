@@ -17,7 +17,6 @@ function renderBackups(json) {
       <td><span class="backup-type">${backup.type || 'Vollständig'}</span></td>
       <td class="text-right">
         <button class="btn btn-secondary btn-sm restore-btn" data-slug="${backup.slug}">Auswählen</button>
-        <button class="btn btn-primary btn-sm restore-now-btn" data-slug="${backup.slug}">Wiederherstellen</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -29,17 +28,16 @@ function renderBackups(json) {
       document.getElementById('slug').value = slug;
       document.querySelector('[data-tab="restore"]').click();
       populateRestoreOptionsFromBackup(slug);
+      // Zeile visuell markieren
+      const tr = btn.closest('tr');
+      const table = tr?.closest('table');
+      if (table) table.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      if (tr) tr.classList.add('selected');
       btn.textContent = '✓ Ausgewählt';
-      setTimeout(() => { btn.textContent = 'Auswählen'; }, 2000);
+      setTimeout(() => { btn.textContent = 'Auswählen'; }, 1500);
     };
   });
 
-  tbody.querySelectorAll('.restore-now-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const slug = btn.getAttribute('data-slug');
-      await restoreLocalWithSlug(slug);
-    };
-  });
 }
 
 function renderS3List(json) {
@@ -60,7 +58,6 @@ function renderS3List(json) {
       <td>${formatDate(lastModified)}</td>
       <td class="text-right">
         <button class="btn btn-secondary btn-sm pick-s3-btn" data-key="${key}">Auswählen</button>
-        <button class="btn btn-primary btn-sm restore-s3-btn" data-key="${key}">Wiederherstellen</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -69,15 +66,13 @@ function renderS3List(json) {
     btn.onclick = () => {
       const key = btn.getAttribute('data-key');
       document.getElementById('s3key').value = key;
+      // Zeile visuell markieren
+      const tr = btn.closest('tr');
+      const table = tr?.closest('table');
+      if (table) table.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      if (tr) tr.classList.add('selected');
       btn.textContent = '✓ Ausgewählt';
-      setTimeout(() => btn.textContent = 'Auswählen', 2000);
-    };
-  });
-  tbody.querySelectorAll('.restore-s3-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const key = btn.getAttribute('data-key');
-      document.getElementById('s3key').value = key;
-      await restoreFromS3();
+      setTimeout(() => btn.textContent = 'Auswählen', 1500);
     };
   });
 }

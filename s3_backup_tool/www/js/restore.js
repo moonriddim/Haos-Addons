@@ -124,7 +124,6 @@ function renderLocalRestoreTable(json) {
       <td><span class="backup-type">${backup.type || 'Vollständig'}</span></td>
       <td class="text-right">
         <button class="btn btn-secondary btn-sm" data-slug="${backup.slug}">Auswählen</button>
-        <button class="btn btn-primary btn-sm" data-action="restore" data-slug="${backup.slug}">Wiederherstellen</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -132,15 +131,16 @@ function renderLocalRestoreTable(json) {
   // Aktionen verdrahten
   tbody.querySelectorAll('button[data-slug]')?.forEach(btn => {
     const slug = btn.getAttribute('data-slug');
-    if (btn.getAttribute('data-action') === 'restore') {
-      btn.onclick = () => restoreLocalWithSlug(slug);
-    } else {
-      btn.onclick = () => {
-        const slugInput = document.getElementById('slug');
-        if (slugInput) slugInput.value = slug;
-        populateRestoreOptionsFromBackup(slug);
-      };
-    }
+    btn.onclick = () => {
+      const slugInput = document.getElementById('slug');
+      if (slugInput) slugInput.value = slug;
+      populateRestoreOptionsFromBackup(slug);
+      // Zeile visuell markieren
+      const tr = btn.closest('tr');
+      const table = tr?.closest('table');
+      if (table) table.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      if (tr) tr.classList.add('selected');
+    };
   });
 }
 
