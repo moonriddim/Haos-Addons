@@ -172,6 +172,7 @@
             <div class="card-header">
               <h3 class="card-title">Konfiguration</h3>
               <p class="card-description">Passe die Einstellungen für deinen gewählten Provider an</p>
+              <p id="provider-note" class="text-muted" style="margin-top:6px"></p>
             </div>
             <div class="card-content">
               <div class="form-grid">
@@ -254,7 +255,7 @@
                     <span class="checkbox-indicator"></span>
                     Neue Home Assistant Backups automatisch nach S3 hochladen
                   </label>
-                  <p class="form-hint">Überwacht den Ordner /backup und lädt neue .tar-Dateien hoch.</p>
+                  <p class="form-hint">Überwacht den Ordner /backup (eventbasiert via inotify) und lädt neue .tar-Dateien sofort zu S3 hoch.</p>
                 </div>
 
                 <div class="form-group checkbox-group">
@@ -263,6 +264,7 @@
                     <span class="checkbox-indicator"></span>
                     Bestehende lokale Backups beim Start hochladen
                   </label>
+                  <p class="form-hint">Beim Add-on Start werden alle vorhandenen /backup/*.tar einmalig zu S3 übertragen.</p>
                 </div>
 
                 <div class="form-group checkbox-group">
@@ -271,6 +273,7 @@
                     <span class="checkbox-indicator"></span>
                     Lokale Backup-Datei nach Upload löschen
                   </label>
+                  <p class="form-hint">Hilft Platz zu sparen. Stelle sicher, dass der Upload erfolgreich war (siehe Aktivität).</p>
                 </div>
 
                 <div class="form-group checkbox-group">
@@ -279,6 +282,7 @@
                     <span class="checkbox-indicator"></span>
                     Beim Start sofort ein Backup erstellen
                   </label>
+                  <p class="form-hint">Erstellt direkt beim Start ein vollständiges Backup und lädt es anschließend hoch.</p>
                 </div>
 
                 <div class="form-group">
@@ -296,11 +300,13 @@
                 <div class="form-group">
                   <label for="keep-last-input" class="form-label">S3 Behalte letzte N Backups</label>
                   <input id="keep-last-input" type="number" min="0" step="1" class="form-input" placeholder="0" />
+                  <p class="form-hint">Wenn > 0, werden bei neuen Uploads ältere Dateien nach Anzahl entfernt.</p>
                 </div>
 
                 <div class="form-group">
                   <label for="retention-days-input" class="form-label">S3 Aufbewahrung in Tagen</label>
                   <input id="retention-days-input" type="number" min="0" step="1" class="form-input" placeholder="0" />
+                  <p class="form-hint">Wenn > 0, werden Dateien gelöscht, die älter als die angegebene Anzahl Tage sind.</p>
                 </div>
               </div>
 

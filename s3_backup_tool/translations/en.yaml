@@ -1,0 +1,96 @@
+configuration:
+  s3_endpoint_url:
+    name: Endpoint URL
+    description: S3-compatible endpoint URL (e.g. https://s3.amazonaws.com)
+  s3_region_name:
+    name: Region
+    description: Cloud provider region (e.g. eu-central-1)
+  s3_bucket:
+    name: Bucket
+    description: Name of the S3 bucket to store backups in
+  s3_prefix:
+    name: Object prefix
+    description: Optional object key prefix for uploads
+  access_key_id:
+    name: Access Key ID
+    description: Access credentials for the S3 provider
+  secret_access_key:
+    name: Secret Access Key
+    description: Secret for the access key
+  backup_interval_hours:
+    name: Interval (hours)
+    description: Create a backup every N hours (if no cron is set)
+  full_backup:
+    name: Full backup
+    description: If disabled, use partial backup configuration below
+  backup_name_template:
+    name: Backup name template
+    description: Use {date} placeholder. Example: HA Backup {date}
+  verify_ssl:
+    name: Verify TLS certificates
+    description: Disable only for custom/self-signed endpoints
+  run_on_start:
+    name: Run on start
+    description: Create a backup immediately when the add-on starts
+  retention_keep_last_s3:
+    name: Keep last N in S3
+    description: If greater than 0, delete older backups by count
+  retention_days_s3:
+    name: Retention days in S3
+    description: If greater than 0, delete backups older than N days
+  delete_local_after_upload:
+    name: Delete local after upload
+    description: Remove local .tar after successful upload
+  force_path_style:
+    name: Use path-style URLs
+    description: Required for some S3-compatible services
+  auto_create_bucket:
+    name: Auto-create bucket
+    description: Create the bucket if it does not exist
+  backup_password:
+    name: Backup password
+    description: Optional password to protect backups
+  partial_include_homeassistant:
+    name: Include Home Assistant
+    description: Include HA config in partial backups
+  partial_folders:
+    name: Folders
+    description: Folders to include in partial backups
+  partial_addons:
+    name: Add-ons
+    description: Add-ons to include in partial backups
+  webhook_success_url:
+    name: Success webhook URL
+    description: Optional webhook on successful uploads
+  webhook_failure_url:
+    name: Failure webhook URL
+    description: Optional webhook on failures
+  healthcheck_ping_url:
+    name: Healthcheck ping URL
+    description: Optional healthcheck endpoint
+  s3_sse:
+    name: Server-side encryption
+    description: NONE / AES256 / KMS
+  s3_sse_kms_key_id:
+    name: KMS Key ID
+    description: KMS key identifier when SSE=KMS
+  backup_schedule_cron:
+    name: Cron schedule
+    description: Cron expression to run backups (overrides interval)
+  enable_restore_helper:
+    name: Enable restore helper
+    description: Allow triggering restores from UI
+  restore_slug:
+    name: Restore slug
+    description: Local backup slug to restore
+  restore_from_s3_key:
+    name: Restore from S3 key
+    description: Object key in S3 to restore from
+  restore_password:
+    name: Restore password
+    description: Password used for restoring encrypted backups
+
+network:
+  8099/tcp: Web UI (Ingress)
+
+

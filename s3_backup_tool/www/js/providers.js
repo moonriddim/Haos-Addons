@@ -65,6 +65,22 @@ function initializeProviders() {
     }
     show('group-kms', !!caps.kms);
     show('group-versioning', !!caps.versioning);
+
+    // Provider-spezifischer Hinweis (z. B. Storj ohne Versionierung/SSE)
+    const note = document.getElementById('provider-note');
+    if (note) {
+      if (provider === 'storj') {
+        note.textContent = 'Storj nutzt clientseitige Ende-zu-Ende-Verschlüsselung und bietet keine native Objekt-Versionierung.';
+      } else if (provider === 'hetzner') {
+        note.textContent = 'Hetzner unterstützt Versionierung und SSE (AES256).';
+      } else if (provider === 'gcp') {
+        note.textContent = 'Google Cloud: Objektversionierung und Verschlüsselung (inkl. kundenverwaltete Schlüssel) verfügbar.';
+      } else if (provider === 'aws') {
+        note.textContent = 'AWS S3: Versionierung, SSE (AES256/KMS) und Regionen-Auswahl verfügbar.';
+      } else {
+        note.textContent = '';
+      }
+    }
   }
   providerCards.forEach(card => {
     card.onclick = () => {

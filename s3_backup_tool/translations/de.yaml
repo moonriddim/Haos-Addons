@@ -1,0 +1,96 @@
+configuration:
+  s3_endpoint_url:
+    name: Endpoint URL
+    description: S3-kompatible Endpoint-URL (z. B. https://s3.amazonaws.com)
+  s3_region_name:
+    name: Region
+    description: Cloud-Region (z. B. eu-central-1)
+  s3_bucket:
+    name: Bucket
+    description: Name des S3-Buckets für Backups
+  s3_prefix:
+    name: Objekt-Präfix
+    description: Optionales Präfix, das vor Dateinamen gesetzt wird
+  access_key_id:
+    name: Access Key ID
+    description: Zugriffsschlüssel für den S3-Provider
+  secret_access_key:
+    name: Secret Access Key
+    description: Geheimes Passwort zum Access Key
+  backup_interval_hours:
+    name: Intervall (Stunden)
+    description: Erstelle alle N Stunden ein Backup (wenn kein Cron gesetzt)
+  full_backup:
+    name: Vollständiges Backup
+    description: Wenn deaktiviert, nutze die partielle Auswahl unten
+  backup_name_template:
+    name: Backup-Namen-Schablone
+    description: Platzhalter {date} verwenden. Beispiel: HA Backup {date}
+  verify_ssl:
+    name: TLS-Zertifikate prüfen
+    description: Nur für selbstsignierte Endpoints deaktivieren
+  run_on_start:
+    name: Beim Start ausführen
+    description: Beim Start des Add-ons sofort ein Backup erstellen
+  retention_keep_last_s3:
+    name: S3 Behalte letzte N
+    description: Wenn > 0, ältere Backups nach Anzahl löschen
+  retention_days_s3:
+    name: S3 Aufbewahrung (Tage)
+    description: Wenn > 0, Backups löschen die älter als N Tage sind
+  delete_local_after_upload:
+    name: Lokal nach Upload löschen
+    description: Lokale .tar-Datei nach erfolgreichem Upload entfernen
+  force_path_style:
+    name: Path-Style URLs verwenden
+    description: Für einige S3-kompatible Services erforderlich
+  auto_create_bucket:
+    name: Bucket automatisch anlegen
+    description: Lege den Bucket an, falls er nicht existiert
+  backup_password:
+    name: Backup-Passwort
+    description: Optionales Passwort zum Schutz der Backups
+  partial_include_homeassistant:
+    name: Home Assistant einschließen
+    description: HA-Konfiguration in partielle Backups aufnehmen
+  partial_folders:
+    name: Ordner
+    description: Ordner für partielle Backups
+  partial_addons:
+    name: Add-ons
+    description: Add-ons für partielle Backups
+  webhook_success_url:
+    name: Erfolg Webhook URL
+    description: Optionaler Webhook bei erfolgreichem Upload
+  webhook_failure_url:
+    name: Fehler Webhook URL
+    description: Optionaler Webhook bei Fehlern
+  healthcheck_ping_url:
+    name: Healthcheck Ping URL
+    description: Optionaler Healthcheck-Endpunkt
+  s3_sse:
+    name: Serverseitige Verschlüsselung
+    description: NONE / AES256 / KMS
+  s3_sse_kms_key_id:
+    name: KMS Schlüssel-ID
+    description: KMS Key für SSE=KMS
+  backup_schedule_cron:
+    name: Cron Zeitplan
+    description: Cron-Ausdruck für Backups (überschreibt Intervall)
+  enable_restore_helper:
+    name: Restore-Helfer aktivieren
+    description: Wiederherstellungen per UI ermöglichen
+  restore_slug:
+    name: Restore Slug
+    description: Lokaler Backup-Slug zur Wiederherstellung
+  restore_from_s3_key:
+    name: Wiederherstellung aus S3 Key
+    description: Objekt-Key im S3-Bucket zur Wiederherstellung
+  restore_password:
+    name: Restore-Passwort
+    description: Passwort für verschlüsselte Backups beim Restore
+
+network:
+  8099/tcp: Web-UI (Ingress)
+
+
