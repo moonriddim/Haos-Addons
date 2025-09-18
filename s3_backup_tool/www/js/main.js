@@ -29,6 +29,8 @@ async function refresh() {
     } else {
       try { renderBackups(JSON.parse(result.body)); out('Lokale Backups erfolgreich geladen'); }
       catch (e) { out('Fehler beim Parsen der Backup-Liste: ' + e.message); out('Raw response: ' + result.body); }
+      // Auch Restore-Tabelle füllen, wenn vorhanden
+      try { renderLocalRestoreTable(JSON.parse(result.body)); } catch (_) {}
     }
     try {
       const s3Result = await call('api/list-s3');
@@ -47,7 +49,6 @@ function initializeTabs() {
   const pageTitle = document.getElementById('page-title');
   const pageDescription = document.getElementById('page-description');
   const tabInfo = {
-    backups: { title: 'Backup Übersicht', description: 'Verwalte deine Home Assistant Backups in der Cloud' },
     providers: { title: 'Cloud Provider', description: 'Konfiguriere deinen bevorzugten Cloud-Storage-Anbieter' },
     restore: { title: 'Backup Wiederherstellen', description: 'Stelle deine Home Assistant-Konfiguration wieder her' },
     activity: { title: 'System-Aktivität', description: 'Überwache laufende Prozesse und Systemlogs' }
@@ -57,7 +58,7 @@ function initializeTabs() {
     tabPanels.forEach(panel => panel.classList.toggle('active', panel.id === `${tabId}-panel`));
     if (tabInfo[tabId]) { pageTitle.textContent = tabInfo[tabId].title; pageDescription.textContent = tabInfo[tabId].description; }
     currentTab = tabId;
-    if (tabId === 'backups' || tabId === 'restore') {
+    if (tabId === 'restore') {
       refresh();
       if (tabId === 'restore') {
         const slugInput = document.getElementById('slug');
@@ -66,7 +67,7 @@ function initializeTabs() {
     }
   }
   tabButtons.forEach(button => { button.addEventListener('click', (e) => { e.preventDefault(); switchTab(button.dataset.tab); }); });
-  switchTab('backups');
+  switchTab('restore');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

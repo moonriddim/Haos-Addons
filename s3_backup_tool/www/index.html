@@ -21,11 +21,11 @@
       </div>
       
       <div class="nav-menu">
-        <button class="nav-item active" data-tab="backups">
+        <button class="nav-item active" data-tab="restore">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
           </svg>
-          Backups
+          Wiederherstellen
         </button>
         
         <button class="nav-item" data-tab="providers">
@@ -38,13 +38,7 @@
           Provider
         </button>
         
-        <button class="nav-item" data-tab="restore">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
-            <path d="M8 5V3a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          </svg>
-          Wiederherstellen
-        </button>
+        
         
         <button class="nav-item" data-tab="activity">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -85,39 +79,6 @@
 
       <!-- Tab Content -->
       <div class="tab-content">
-        <!-- Backups Tab -->
-        <div class="tab-panel active" id="backups-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">Verfügbare Backups</h3>
-            </div>
-            <div class="card-content">
-              <div class="table-container" id="backup-table-container">
-                <table id="backup-table" class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Slug</th>
-                      <th>Datum</th>
-                      <th>Größe</th>
-                      <th>Typ</th>
-                      <th class="text-right">Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-                <div id="empty-state" class="empty-state">
-                  <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                  </svg>
-                  <h4>Noch keine Backups vorhanden</h4>
-                  <p>Erstelle dein erstes Backup, um loszulegen.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Providers Tab -->
         <div class="tab-panel" id="providers-panel">
           <div class="card">
@@ -383,7 +344,7 @@
                     <h4>Lokales Backup</h4>
                   </div>
                   <p class="restore-description">Wiederherstellen über Backup-Slug</p>
-                  <div class="form-group">
+                  <div class="form-group" id="restore-slug-form" style="display:none">
                     <label for="slug" class="form-label">Backup Slug</label>
                     <div class="input-group">
                       <input id="slug" type="text" class="form-input" placeholder="abcdef12" />
@@ -426,6 +387,34 @@
                     <div class="input-group">
                       <input id="s3key" type="text" class="form-input" placeholder="homeassistant/abcdef12.tar" />
                       <button id="btn-restore-s3" class="btn btn-primary">Wiederherstellen</button>
+                    </div>
+                  </div>
+                </div>
+                <!-- Lokale Backup-Liste -->
+                <div class="restore-option">
+                  <div class="restore-header">
+                    <svg class="restore-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    </svg>
+                    <h4>Lokale Backups</h4>
+                  </div>
+                  <div class="table-container">
+                    <table id="local-restore-table" class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Slug</th>
+                          <th>Datum</th>
+                          <th>Größe</th>
+                          <th>Typ</th>
+                          <th class="text-right">Aktionen</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                    <div id="local-restore-empty" class="empty-state" style="display:none">
+                      <h4>Keine lokalen Backups gefunden</h4>
+                      <p>Es wurden keine lokalen Backups erkannt.</p>
                     </div>
                   </div>
                 </div>

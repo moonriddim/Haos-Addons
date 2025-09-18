@@ -161,7 +161,7 @@ function initializeProviders() {
   const editWrapper = document.getElementById('provider-edit-wrapper');
   const btnEdit = document.getElementById('btn-edit-provider');
   const btnCancel = document.getElementById('btn-cancel-edit');
-  if (btnEdit && btnCancel && summaryCard && editWrapper) {
+  if (btnEdit && summaryCard && editWrapper) {
     btnEdit.onclick = () => { editWrapper.style.display = ''; summaryCard.style.display = 'none'; };
     if (btnCancel) btnCancel.onclick = () => { editWrapper.style.display = 'none'; summaryCard.style.display = ''; loadSummaryFromOverrides(); };
     // Initial anzeigen

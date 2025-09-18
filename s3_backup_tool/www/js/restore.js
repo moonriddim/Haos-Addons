@@ -104,4 +104,45 @@ async function restoreFromS3() {
   }
 }
 
+// Liste der lokalen Backups im Restore-Tab rendern (gleiche Spalten wie in der Übersicht)
+function renderLocalRestoreTable(json) {
+  const tbody = document.querySelector('#local-restore-table tbody');
+  const empty = document.getElementById('local-restore-empty');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const list = (json && json.data && json.data.backups) || [];
+  if (empty) empty.style.display = list.length ? 'none' : 'block';
+  for (const backup of list) {
+    const tr = document.createElement('tr');
+    const date = backup.date || backup.created || '';
+    const sizeBytes = getBackupSizeBytes(backup);
+    tr.innerHTML = `
+      <td><strong>${backup.name || 'Unbekannt'}</strong></td>
+      <td><code>${backup.slug || ''}</code></td>
+      <td>${formatDate(date)}</td>
+      <td>${formatBytes(sizeBytes)}</td>
+      <td><span class="backup-type">${backup.type || 'Vollständig'}</span></td>
+      <td class="text-right">
+        <button class="btn btn-secondary btn-sm" data-slug="${backup.slug}">Auswählen</button>
+        <button class="btn btn-primary btn-sm" data-action="restore" data-slug="${backup.slug}">Wiederherstellen</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+  // Aktionen verdrahten
+  tbody.querySelectorAll('button[data-slug]')?.forEach(btn => {
+    const slug = btn.getAttribute('data-slug');
+    if (btn.getAttribute('data-action') === 'restore') {
+      btn.onclick = () => restoreLocalWithSlug(slug);
+    } else {
+      btn.onclick = () => {
+        const slugInput = document.getElementById('slug');
+        if (slugInput) slugInput.value = slug;
+        populateRestoreOptionsFromBackup(slug);
+      };
+    }
+  });
+}
+
+
 
