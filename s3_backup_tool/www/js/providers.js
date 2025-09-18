@@ -245,6 +245,74 @@ function initializeProviders() {
   regionInput.addEventListener('dblclick', (e) => { e.stopPropagation(); regionInput.select(); });
   regionInput.addEventListener('focus', () => { if (!regionInput.value.trim()) regionInput.placeholder = 'z.B. eu-central-1, us-east-1, ap-southeast-1'; });
   regionInput.addEventListener('blur', () => { regionInput.placeholder = 'eu-central-1'; });
+
+  // Gespeicherte Overrides laden und Felder befüllen
+  async function loadOverridesAndPopulate() {
+    try {
+      const res = await call('api/get-overrides');
+      if (!res.ok) return;
+      const o = JSON.parse(res.body || '{}');
+
+      // Provider aus Endpoint ableiten (best effort)
+      const allCards = Array.from(document.querySelectorAll('.provider-card'));
+      const matchCard = allCards.find(c => (c.dataset.ep || '').toLowerCase() === (o.s3_endpoint_url || '').toLowerCase());
+      if (matchCard) {
+        allCards.forEach(c => c.classList.remove('active'));
+        matchCard.classList.add('active');
+        selectedPreset = { ep: matchCard.dataset.ep, rg: matchCard.dataset.rg, fps: matchCard.dataset.fps, id: matchCard.dataset.provider };
+        applyCapabilityUI(selectedPreset.id);
+      }
+
+      // Zugangsdaten
+      const bucketEl = document.getElementById('bucket-input');
+      const akEl = document.getElementById('ak-input');
+      const skEl = document.getElementById('sk-input');
+      if (bucketEl && o.s3_bucket) bucketEl.value = o.s3_bucket;
+      if (akEl && o.access_key_id) akEl.value = o.access_key_id;
+      // Secret nicht anzeigen – beim Speichern bleibt es durch Backend-Logik erhalten, wenn leer
+
+      // Provider Felder
+      if (endpointInput && o.s3_endpoint_url) { endpointInput.value = o.s3_endpoint_url; }
+      if (prefixInput && typeof o.s3_prefix === 'string') { prefixInput.value = o.s3_prefix; }
+
+      if (typeof o.force_path_style !== 'undefined') {
+        const v = String(o.force_path_style).toLowerCase();
+        document.getElementById('fps-input').checked = (v === 'true' || v === '1');
+      }
+
+      if (regionInput && (o.s3_region_name || o.s3_region_name === '')) {
+        // Einige Provider brauchen keine Region – Feld ggf. leer lassen
+        regionInput.value = o.s3_region_name || '';
+        const opt = Array.from(regionSelect.options).find(opt => opt.value === regionInput.value);
+        regionSelect.value = opt ? regionInput.value : '';
+      }
+
+      // Erweiterte Optionen
+      const sseSel = document.getElementById('sse-select');
+      const kmsEl = document.getElementById('kms-input');
+      const verEl = document.getElementById('versioning-input');
+      if (sseSel && typeof o.s3_sse !== 'undefined') sseSel.value = o.s3_sse || '';
+      if (kmsEl && typeof o.s3_sse_kms_key_id !== 'undefined') kmsEl.value = o.s3_sse_kms_key_id || '';
+      if (verEl && typeof o.enable_versioning !== 'undefined') verEl.checked = !!o.enable_versioning;
+
+      // Backup Automatik / Retention
+      const setIf = (id, val) => { const el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = !!val; else if (typeof val !== 'undefined' && val !== null) el.value = val; };
+      setIf('watch-ha-input', o.watch_ha_backups);
+      setIf('upload-existing-input', o.upload_existing);
+      setIf('delete-local-input', o.delete_local_after_upload);
+      setIf('run-on-start-input', o.run_on_start);
+      setIf('interval-input', o.backup_interval_hours);
+      setIf('cron-input', o.backup_schedule_cron);
+      setIf('keep-last-input', o.retention_keep_last_s3);
+      setIf('retention-days-input', o.retention_days_s3);
+
+      loadSummaryFromOverrides();
+      out('Gespeicherte Einstellungen geladen');
+    } catch (_) {}
+  }
+
+  // Initial laden
+  loadOverridesAndPopulate();
 }
 
 async function applyProviderSettings() {

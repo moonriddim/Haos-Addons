@@ -49,6 +49,7 @@ function initializeTabs() {
   const pageTitle = document.getElementById('page-title');
   const pageDescription = document.getElementById('page-description');
   const tabInfo = {
+    backups: { title: 'Lokale Backups', description: 'Verwalte und starte lokale Backups' },
     providers: { title: 'Cloud Provider', description: 'Konfiguriere deinen bevorzugten Cloud-Storage-Anbieter' },
     restore: { title: 'Backup Wiederherstellen', description: 'Stelle deine Home Assistant-Konfiguration wieder her' },
     activity: { title: 'System-Aktivität', description: 'Überwache laufende Prozesse und Systemlogs' }
@@ -67,14 +68,17 @@ function initializeTabs() {
     }
   }
   tabButtons.forEach(button => { button.addEventListener('click', (e) => { e.preventDefault(); switchTab(button.dataset.tab); }); });
-  switchTab('restore');
+  switchTab('backups');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   initializeProviders();
-  document.getElementById('btn-backup').onclick = runBackup;
-  document.getElementById('btn-refresh').onclick = refresh;
+  // Header-Buttons existieren nicht mehr
+  const rl = document.getElementById('btn-refresh-local');
+  if (rl) rl.onclick = refresh;
+  const bl = document.getElementById('btn-backup-local');
+  if (bl) bl.onclick = runBackup;
   document.getElementById('btn-apply-preset').onclick = applyProviderSettings;
   // Zugangsdaten werden jetzt über "Speichern und schließen" übernommen
   document.getElementById('btn-restore-local').onclick = restoreLocal;
