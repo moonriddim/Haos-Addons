@@ -6,7 +6,14 @@ let currentTab = 'backups';
 async function call(path, opts = {}) {
   const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...opts });
   const txt = await res.text();
-  return { ok: res.ok, body: txt };
+  
+  // Bessere Fehlerbehandlung für Debugging
+  if (!res.ok) {
+    console.error(`HTTP ${res.status}: ${res.statusText} für ${path}`);
+    console.error('Response body:', txt);
+  }
+  
+  return { ok: res.ok, status: res.status, body: txt };
 }
 
 function out(msg) {
@@ -226,21 +233,27 @@ function initializeProviders() {
         fps: card.dataset.fps
       };
       
-      // Felder ausfüllen
+      // Felder ausfüllen (nur wenn leer, um manuelle Eingaben nicht zu überschreiben)
       const regionInput = document.getElementById('region-input');
       const regionSelect = document.getElementById('region-select');
       const endpointInput = document.getElementById('endpoint-input');
       const pathStyleCheckbox = document.getElementById('fps-input');
       
-      if (selectedPreset.rg && selectedPreset.rg !== 'auto') {
+      // Region: nur vorbelegen wenn noch kein Wert eingetragen ist
+      if (selectedPreset.rg && selectedPreset.rg !== 'auto' && !regionInput.value.trim()) {
         regionInput.value = selectedPreset.rg;
+        regionSelect.value = selectedPreset.rg;
+      } else if (selectedPreset.rg && selectedPreset.rg !== 'auto') {
+        // Preset als Dropdown-Option markieren, aber Input-Feld nicht überschreiben
         regionSelect.value = selectedPreset.rg;
       }
       
-      if (selectedPreset.ep) {
+      // Endpoint: nur vorbelegen wenn leer
+      if (selectedPreset.ep && !endpointInput.value.trim()) {
         endpointInput.value = selectedPreset.ep;
       }
       
+      // Path Style: immer setzen (ist ja nur ein Checkbox)
       pathStyleCheckbox.checked = selectedPreset.fps === 'true';
       
       // Visuelles Feedback
@@ -255,16 +268,43 @@ function initializeProviders() {
   regionSelect.onchange = () => {
     if (regionSelect.value) {
       regionInput.value = regionSelect.value;
+      // Visuelles Feedback für übernommene Region
+      out(`Region übernommen: ${regionSelect.value}`);
     }
   };
   
   regionInput.oninput = () => {
-    if (regionInput.value) {
-      // Prüfen, ob der Wert in der Select-Liste vorhanden ist
-      const option = Array.from(regionSelect.options).find(opt => opt.value === regionInput.value);
-      regionSelect.value = option ? regionInput.value : '';
-    }
+    // Prüfen, ob der Wert in der Select-Liste vorhanden ist
+    const option = Array.from(regionSelect.options).find(opt => opt.value === regionInput.value);
+    regionSelect.value = option ? regionInput.value : '';
   };
+  
+  // Sicherstellen dass das Input-Feld funktioniert
+  regionInput.addEventListener('click', (e) => {
+    e.stopPropagation();
+    regionInput.focus();
+  });
+  
+  // Placeholder für bessere Benutzerführung dynamisch setzen
+  regionInput.addEventListener('focus', () => {
+    if (!regionInput.value.trim()) {
+      regionInput.placeholder = 'z.B. eu-central-1, us-east-1, ap-southeast-1';
+    }
+    // Debug-Info bei Focus
+    out('✏️ Region-Eingabe aktiv');
+  });
+  
+  regionInput.addEventListener('blur', () => {
+    regionInput.placeholder = 'eu-central-1';
+  });
+  
+  // Input-Verhalten debuggen
+  regionInput.addEventListener('keydown', (e) => {
+    // Bestätigung dass Tasteneingaben ankommen
+    if (e.key.length === 1) { // Normale Zeichen
+      console.log('Region input: ' + e.key);
+    }
+  });
 }
 
 // Event Handlers für Buttons
@@ -294,13 +334,21 @@ async function refresh() {
   try {
     // Lokale Backups laden
     const result = await call('/api/list');
-    try {
-      renderBackups(JSON.parse(result.body));
-    } catch (e) {
-      out('Fehler beim Parsen der Backup-Liste');
-    }
     
-    out(result.body || (result.ok ? 'Liste erfolgreich geladen' : 'Fehler beim Laden'));
+    if (!result.ok) {
+      out(`HTTP ${result.status}: Kann lokale Backups nicht laden`);
+      if (result.status === 404) {
+        out('Prüfe ob CGI-Scripts richtig konfiguriert sind...');
+      }
+    } else {
+      try {
+        renderBackups(JSON.parse(result.body));
+        out('Lokale Backups erfolgreich geladen');
+      } catch (e) {
+        out('Fehler beim Parsen der Backup-Liste: ' + e.message);
+        out('Raw response: ' + result.body);
+      }
+    }
     
     // S3-Liste optional laden (ohne Fehler zu werfen)
     try {
@@ -450,6 +498,7 @@ async function restoreFromS3() {
   }
 }
 
+
 // Hilfsfunktionen für Formatierung
 function formatDate(dateStr) {
   if (!dateStr) return '-';
@@ -575,7 +624,7 @@ window.addEventListener('unhandledrejection', (e) => {
   console.error('Unbehandelte Promise-Rejection:', e.reason);
 });
 
-// Export für Debugging (nur in Development)
+  // Export für Debugging (nur in Development)
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
   window.debugUtils = {
     refresh,

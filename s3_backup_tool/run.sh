@@ -121,7 +121,8 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
-cgi.assign = ( ".sh" => "/bin/sh" )
+# CGI-Handler: Leer bedeutet, dass die Shebang-Zeile verwendet wird
+cgi.assign = ( ".sh" => "" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )
@@ -539,7 +540,8 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
-cgi.assign = ( ".sh" => "/bin/sh" )
+# CGI-Handler: Leer bedeutet, dass die Shebang-Zeile verwendet wird
+cgi.assign = ( ".sh" => "" )
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )

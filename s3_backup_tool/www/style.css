@@ -425,14 +425,19 @@ body {
 .input-with-select {
   display: flex;
   gap: 0.5rem;
+  position: relative;
 }
 
 .input-with-select .form-input {
   flex: 1;
+  z-index: 1;
+  position: relative;
+  pointer-events: auto;
 }
 
 .input-with-select .form-select {
   min-width: 200px;
+  z-index: 2;
 }
 
 .form-hint {
