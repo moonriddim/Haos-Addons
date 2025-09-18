@@ -105,6 +105,9 @@ require_bin aws || exit 1
 echo "$SUPERVISOR_TOKEN" > /tmp/supervisor_token
 chmod 600 /tmp/supervisor_token
 
+# Sicherstellen dass CGI-Scripts ausführbar sind
+find /www -name "*.sh" -exec chmod +x {} +
+
 # HTTP-UI früh starten, damit Ingress/Frontend erreichbar ist
 if ! pgrep -x lighttpd >/dev/null 2>&1; then
   port="$(bashio::addon.ingress_port 2>/dev/null || true)"
@@ -116,6 +119,9 @@ if ! pgrep -x lighttpd >/dev/null 2>&1; then
 server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = __PORT__
+server.errorlog = "/tmp/lighttpd_error.log"
+server.breakagelog = "/tmp/lighttpd_access.log"
+
 mimetype.assign = (
   ".html" => "text/html",
   ".css" => "text/css",
@@ -124,9 +130,27 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
+
+# CGI-Konfiguration
 cgi.assign = ( ".sh" => "/bin/sh" )
+
+# CGI-Verzeichnis verfügbar machen
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
-url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
+
+# API-Umschreibung mit besserer Syntax
+url.rewrite-once = (
+  "^/api/backup$" => "/cgi-bin/backup.sh",
+  "^/api/list$" => "/cgi-bin/list.sh",
+  "^/api/list-s3$" => "/cgi-bin/list-s3.sh",
+  "^/api/restore-local$" => "/cgi-bin/restore-local.sh",
+  "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
+  "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
+  "^/api/log$" => "/cgi-bin/log.sh",
+  "^/api/debug-log$" => "/cgi-bin/debug-log.sh"
+)
+
+# Standard-Index und Fallback
+index-file.names = ( "index.html" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
   sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf
@@ -529,6 +553,9 @@ start_http_ui() {
   echo "$SUPERVISOR_TOKEN" > /tmp/supervisor_token
   chmod 600 /tmp/supervisor_token
   
+  # Sicherstellen dass CGI-Scripts ausführbar sind
+  find /www -name "*.sh" -exec chmod +x {} +
+  
   port="$(bashio::addon.ingress_port 2>/dev/null || true)"
   if [[ -z "$port" ]]; then
     port=8099
@@ -539,6 +566,9 @@ start_http_ui() {
 server.modules = ("mod_access", "mod_alias", "mod_cgi", "mod_rewrite")
 server.document-root = "/www"
 server.port = __PORT__
+server.errorlog = "/tmp/lighttpd_error.log"
+server.breakagelog = "/tmp/lighttpd_access.log"
+
 mimetype.assign = (
   ".html" => "text/html",
   ".css" => "text/css",
@@ -547,9 +577,27 @@ mimetype.assign = (
   ".png" => "image/png",
   ".svg" => "image/svg+xml"
 )
+
+# CGI-Konfiguration
 cgi.assign = ( ".sh" => "/bin/sh" )
+
+# CGI-Verzeichnis verfügbar machen
 alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
-url.rewrite-once = ( "^/api/(.*)$" => "/cgi-bin/$1.sh" )
+
+# API-Umschreibung mit besserer Syntax
+url.rewrite-once = (
+  "^/api/backup$" => "/cgi-bin/backup.sh",
+  "^/api/list$" => "/cgi-bin/list.sh",
+  "^/api/list-s3$" => "/cgi-bin/list-s3.sh",
+  "^/api/restore-local$" => "/cgi-bin/restore-local.sh",
+  "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
+  "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
+  "^/api/log$" => "/cgi-bin/log.sh",
+  "^/api/debug-log$" => "/cgi-bin/debug-log.sh"
+)
+
+# Standard-Index und Fallback
+index-file.names = ( "index.html" )
 url.rewrite-if-not-file = ( "^/$" => "/index.html" )
 EOF
   sed -i "s|__PORT__|${port}|" /etc/lighttpd/lighttpd.conf

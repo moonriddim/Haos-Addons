@@ -4,7 +4,8 @@ RUN apk add --no-cache aws-cli jq curl ca-certificates coreutils busybox-suid li
 COPY www /www
 COPY icon.png /www/icon.png
 RUN chmod -R a+rx /www \
- && find /www -type f -name "*.sh" -exec dos2unix -q {} +
+ && find /www -type f -name "*.sh" -exec dos2unix -q {} + \
+ && find /www -type f -name "*.sh" -exec chmod +x {} +
 # S6-Services via rootfs verwenden, keine CMD-Überschreibung mehr
 COPY rootfs / 
 RUN find /etc/services.d -type f -name "run" -exec dos2unix -q {} + \
