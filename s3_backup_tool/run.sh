@@ -49,6 +49,8 @@ ENABLE_RESTORE_HELPER="$(bashio::config 'enable_restore_helper')"
 RESTORE_SLUG="$(bashio::config 'restore_slug')"
 RESTORE_FROM_S3_KEY="$(bashio::config 'restore_from_s3_key')"
 RESTORE_PASSWORD="$(bashio::config 'restore_password')"
+WATCH_HA_BACKUPS="$(bashio::config 'watch_ha_backups')"
+UPLOAD_EXISTING="$(bashio::config 'upload_existing')"
 
 refresh_runtime_config() {
   # Optionen neu laden
@@ -83,6 +85,8 @@ load_overrides() {
   sse=$(jq -r '.s3_sse // empty' "$f" 2>/dev/null || true)
   kms=$(jq -r '.s3_sse_kms_key_id // empty' "$f" 2>/dev/null || true)
   ev=$(jq -r '.enable_versioning // empty' "$f" 2>/dev/null || true)
+  wh=$(jq -r '.watch_ha_backups // empty' "$f" 2>/dev/null || true)
+  ue=$(jq -r '.upload_existing // empty' "$f" 2>/dev/null || true)
     if [[ -n "$ep" ]]; then S3_ENDPOINT_URL="$ep"; fi
     if [[ -n "$rg" ]]; then S3_REGION_NAME="$rg"; fi
     if [[ -n "$fps" ]]; then FORCE_PATH_STYLE="$fps"; fi
@@ -95,6 +99,8 @@ load_overrides() {
   if [[ -n "$sse" ]]; then S3_SSE="$sse"; fi
   if [[ -n "$kms" ]]; then S3_SSE_KMS_KEY_ID="$kms"; fi
   if [[ -n "$ev" ]]; then ENABLE_VERSIONING="$ev"; fi
+  if [[ -n "$wh" ]]; then WATCH_HA_BACKUPS="$wh"; fi
+  if [[ -n "$ue" ]]; then UPLOAD_EXISTING="$ue"; fi
     log_info "Applied provider overrides from /data/overrides.json"
   fi
 }
@@ -479,6 +485,42 @@ main_loop() {
   if [[ "${RUN_ON_START,,}" == "true" ]]; then
     [[ -n "${HEALTHCHECK_PING_URL:-}" ]] && curl -fsS "${HEALTHCHECK_PING_URL}/start" >/dev/null 2>&1 || true
     create_backup || log_err "Initial backup run failed"
+  fi
+
+  # Optional: bestehende lokale Backups beim Start hochladen
+  if [[ "${UPLOAD_EXISTING,,}" == "true" ]]; then
+    for f in /backup/*.tar; do
+      [[ -f "$f" ]] || continue
+      log_info "Uploading existing local backup: $f"
+      upload_to_s3 "$f" || log_warn "Upload of existing backup failed: $f"
+    done
+  fi
+
+  # Optional: Watcher für neue HA Backups
+  if [[ "${WATCH_HA_BACKUPS,,}" == "true" ]]; then
+    if command -v inotifywait >/dev/null 2>&1; then
+      log_info "Watching /backup for new backups"
+      ( inotifywait -m -e close_write,create --format '%w%f' /backup 2>/dev/null | while read -r path; do
+          if [[ "$path" == *.tar ]]; then
+            log_info "Detected new backup: $path"
+            upload_to_s3 "$path" || log_warn "Auto-upload failed: $path"
+          fi
+        done ) &
+    else
+      log_warn "inotifywait not available. Falling back to polling every 60s."
+      (
+        last_seen=""
+        while true; do
+          newest=$(ls -1t /backup/*.tar 2>/dev/null | head -n 1 || true)
+          if [[ -n "$newest" && "$newest" != "$last_seen" ]]; then
+            last_seen="$newest"
+            log_info "Detected new backup (poll): $newest"
+            upload_to_s3 "$newest" || log_warn "Auto-upload failed: $newest"
+          fi
+          sleep 60
+        done
+      ) &
+    fi
   fi
 
   if [[ -n "${BACKUP_SCHEDULE_CRON:-}" ]]; then

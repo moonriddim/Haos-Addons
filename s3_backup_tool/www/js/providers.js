@@ -85,6 +85,32 @@ function initializeProviders() {
     };
   });
 
+  // Backup-Einstellungen speichern
+  const btnApplyBackup = document.getElementById('btn-apply-backup');
+  if (btnApplyBackup) {
+    btnApplyBackup.onclick = async () => {
+      const payload = {
+        watch_ha_backups: !!document.getElementById('watch-ha-input')?.checked,
+        upload_existing: !!document.getElementById('upload-existing-input')?.checked,
+        delete_local_after_upload: !!document.getElementById('delete-local-input')?.checked,
+        run_on_start: !!document.getElementById('run-on-start-input')?.checked,
+        backup_interval_hours: document.getElementById('interval-input')?.value || null,
+        backup_schedule_cron: document.getElementById('cron-input')?.value || null,
+        retention_keep_last_s3: document.getElementById('keep-last-input')?.value || null,
+        retention_days_s3: document.getElementById('retention-days-input')?.value || null,
+      };
+      setLoading(true);
+      try {
+        const result = await call('api/set-overrides', { body: JSON.stringify(payload) });
+        out(result.body || (result.ok ? 'Backup Einstellungen gespeichert' : 'Fehler beim Speichern'));
+      } catch (e) {
+        out('Fehler: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+  }
+
   const regionInput = document.getElementById('region-input');
   const regionSelect = document.getElementById('region-select');
   const endpointInput = document.getElementById('endpoint-input');
@@ -93,6 +119,36 @@ function initializeProviders() {
   if (active) {
     selectedPreset = { ep: active.dataset.ep, rg: active.dataset.rg, fps: active.dataset.fps, id: active.dataset.provider };
     applyCapabilityUI(selectedPreset.id);
+  }
+
+  // Summary anzeigen
+  function loadSummaryFromOverrides() {
+    fetch('api/debug-log'); // noop to keep same origin warmed (no auth needed)
+    // Wir lesen direkt die UI-Felder (Overlays spiegeln in run.sh wider). Optional: eigener endpoint
+    const bucket = document.getElementById('bucket-input')?.value || '—';
+    const prefix = '—';
+    const endpoint = document.getElementById('endpoint-input')?.value || '—';
+    const region = document.getElementById('region-input')?.value || '—';
+    const sse = document.getElementById('sse-select')?.value || '—';
+    const versioning = document.getElementById('versioning-input')?.checked ? 'aktiv' : 'aus';
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+    set('sum-bucket', bucket);
+    set('sum-prefix', prefix);
+    set('sum-endpoint', endpoint);
+    set('sum-region', region);
+    set('sum-sse', sse || '—');
+    set('sum-versioning', versioning);
+  }
+
+  const summaryCard = document.getElementById('provider-summary-card');
+  const editWrapper = document.getElementById('provider-edit-wrapper');
+  const btnEdit = document.getElementById('btn-edit-provider');
+  const btnCancel = document.getElementById('btn-cancel-edit');
+  if (btnEdit && btnCancel && summaryCard && editWrapper) {
+    btnEdit.onclick = () => { editWrapper.style.display = ''; summaryCard.style.display = 'none'; };
+    btnCancel.onclick = () => { editWrapper.style.display = 'none'; summaryCard.style.display = ''; loadSummaryFromOverrides(); };
+    // Initial anzeigen
+    loadSummaryFromOverrides();
   }
   regionSelect.onchange = () => {
     if (regionSelect.value) { regionInput.value = regionSelect.value; out(`Region übernommen: ${regionSelect.value}`); regionDirty = true; }

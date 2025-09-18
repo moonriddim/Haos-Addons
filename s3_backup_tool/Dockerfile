@@ -1,6 +1,6 @@
 ﻿ARG BUILD_FROM
 FROM $BUILD_FROM
-RUN apk add --no-cache aws-cli jq curl ca-certificates coreutils busybox-suid lighttpd dos2unix
+RUN apk add --no-cache aws-cli jq curl ca-certificates coreutils busybox-suid lighttpd dos2unix inotify-tools
 COPY www /www
 COPY icon.png /www/icon.png
 RUN chmod -R a+rx /www \

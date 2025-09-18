@@ -147,6 +147,27 @@
             </div>
           </div>
 
+          <div class="card" id="provider-summary-card">
+            <div class="card-header">
+              <h3 class="card-title">Aktuelle Einstellungen</h3>
+              <p class="card-description">Zusammenfassung deiner Provider-Konfiguration</p>
+            </div>
+            <div class="card-content">
+              <div class="form-grid">
+                <div class="form-group"><span class="form-label">Bucket</span><div class="text-muted" id="sum-bucket">—</div></div>
+                <div class="form-group"><span class="form-label">Prefix</span><div class="text-muted" id="sum-prefix">—</div></div>
+                <div class="form-group"><span class="form-label">Endpoint</span><div class="text-muted" id="sum-endpoint">—</div></div>
+                <div class="form-group"><span class="form-label">Region</span><div class="text-muted" id="sum-region">—</div></div>
+                <div class="form-group"><span class="form-label">SSE</span><div class="text-muted" id="sum-sse">—</div></div>
+                <div class="form-group"><span class="form-label">Versionierung</span><div class="text-muted" id="sum-versioning">—</div></div>
+              </div>
+              <div class="form-actions">
+                <button id="btn-edit-provider" class="btn btn-primary">Bearbeiten</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="provider-edit-wrapper" style="display:none">
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">Konfiguration</h3>
@@ -222,6 +243,77 @@
 
           <div class="card">
             <div class="card-header">
+              <h3 class="card-title">Backup Einstellungen</h3>
+              <p class="card-description">Automatisches Hochladen und Aufbewahrung steuern</p>
+            </div>
+            <div class="card-content">
+              <div class="form-grid">
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="watch-ha-input" class="form-checkbox" />
+                    <span class="checkbox-indicator"></span>
+                    Neue Home Assistant Backups automatisch nach S3 hochladen
+                  </label>
+                  <p class="form-hint">Überwacht den Ordner /backup und lädt neue .tar-Dateien hoch.</p>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="upload-existing-input" class="form-checkbox" />
+                    <span class="checkbox-indicator"></span>
+                    Bestehende lokale Backups beim Start hochladen
+                  </label>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="delete-local-input" class="form-checkbox" />
+                    <span class="checkbox-indicator"></span>
+                    Lokale Backup-Datei nach Upload löschen
+                  </label>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="run-on-start-input" class="form-checkbox" />
+                    <span class="checkbox-indicator"></span>
+                    Beim Start sofort ein Backup erstellen
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label for="interval-input" class="form-label">Intervall (Stunden)</label>
+                  <input id="interval-input" type="number" min="1" step="1" class="form-input" placeholder="24" />
+                  <p class="form-hint">Einfacher Scheduler. Leer lassen, wenn Cron verwendet wird.</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="cron-input" class="form-label">Cron Ausdruck</label>
+                  <input id="cron-input" type="text" class="form-input" placeholder="0 3 * * *" />
+                  <p class="form-hint">Alternativer Cron-Scheduler (überschreibt Intervall, wenn gesetzt).</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="keep-last-input" class="form-label">S3 Behalte letzte N Backups</label>
+                  <input id="keep-last-input" type="number" min="0" step="1" class="form-input" placeholder="0" />
+                </div>
+
+                <div class="form-group">
+                  <label for="retention-days-input" class="form-label">S3 Aufbewahrung in Tagen</label>
+                  <input id="retention-days-input" type="number" min="0" step="1" class="form-input" placeholder="0" />
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button id="btn-apply-backup" class="btn btn-primary">
+                  Backup Einstellungen speichern
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
               <h3 class="card-title">Zugangsdaten</h3>
               <p class="card-description">Sichere Anmeldeinformationen für deinen Cloud Storage</p>
             </div>
@@ -256,6 +348,10 @@
                 <p>Deine Zugangsdaten werden sicher in der Add-on Konfiguration gespeichert und niemals an Dritte übertragen.</p>
               </div>
             </div>
+          </div>
+          <div class="form-actions" id="provider-edit-toolbar">
+            <button id="btn-cancel-edit" class="btn btn-secondary">Zurück</button>
+          </div>
           </div>
         </div>
 
