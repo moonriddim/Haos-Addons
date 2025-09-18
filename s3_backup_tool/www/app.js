@@ -304,27 +304,10 @@ function initializeProviders() {
     if (!regionInput.value.trim()) {
       regionInput.placeholder = 'z.B. eu-central-1, us-east-1, ap-southeast-1';
     }
-    // Debug-Info bei Focus
-    out('✏️ Region-Eingabe aktiv - jetzt tippen!');
   });
   
   regionInput.addEventListener('blur', () => {
     regionInput.placeholder = 'eu-central-1';
-  });
-  
-  // Input-Verhalten debuggen und forcieren
-  regionInput.addEventListener('keydown', (e) => {
-    e.stopPropagation();
-    // Bestätigung dass Tasteneingaben ankommen
-    if (e.key.length === 1) {
-      console.log('Region input: ' + e.key);
-      out(`Eingabe: ${e.key}`);
-    }
-  });
-  
-  // Input-Änderungen verfolgen
-  regionInput.addEventListener('input', (e) => {
-    out(`Region geändert: ${regionInput.value}`);
   });
 }
 
