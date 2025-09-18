@@ -502,6 +502,29 @@ async function restoreFromS3() {
   }
 }
 
+// Debug-Logs anzeigen
+async function showDebugLogs() {
+  out('Lade Debug-Logs...');
+  setLoading(true);
+  
+  try {
+    const result = await fetch('/api/debug-log');
+    const txt = await result.text();
+    
+    if (result.ok) {
+      out('=== DEBUG LOGS ===');
+      out(txt);
+      out('=== ENDE DEBUG LOGS ===');
+    } else {
+      out(`Fehler beim Laden der Debug-Logs: HTTP ${result.status}`);
+    }
+  } catch (error) {
+    out(`Fehler: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+}
+
 
 // Hilfsfunktionen für Formatierung
 function formatDate(dateStr) {
@@ -554,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-apply-credentials').onclick = applyCredentials;
   document.getElementById('btn-restore-local').onclick = restoreLocal;
   document.getElementById('btn-restore-s3').onclick = restoreFromS3;
+  document.getElementById('btn-debug-log').onclick = showDebugLogs;
   
   // Initial Ladung starten
   out('S3 Backup Tool gestartet');
