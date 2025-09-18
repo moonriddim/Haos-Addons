@@ -3,8 +3,13 @@ let selectedPreset = null;
 let currentTab = 'backups';
 
 // Utility-Funktionen
+function resolvePath(path) {
+  // Entferne führenden Slash, damit Requests relativ zum Ingress-Pfad erfolgen
+  return path.replace(/^\//, '');
+}
+
 async function call(path, opts = {}) {
-  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...opts });
+  const res = await fetch(resolvePath(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...opts });
   const txt = await res.text();
   
   // Bessere Fehlerbehandlung für Debugging
@@ -317,7 +322,7 @@ async function runBackup() {
   setLoading(true);
   
   try {
-    const result = await call('/api/backup');
+    const result = await call('api/backup');
     out(result.body || (result.ok ? 'Backup erfolgreich abgeschlossen!' : 'Fehler beim Backup'));
     
     // Refresh nach erfolgreichem Backup
@@ -337,7 +342,7 @@ async function refresh() {
   
   try {
     // Lokale Backups laden
-    const result = await call('/api/list');
+    const result = await call('api/list');
     
     if (!result.ok) {
       out(`HTTP ${result.status}: Kann lokale Backups nicht laden`);
@@ -356,7 +361,7 @@ async function refresh() {
     
     // S3-Liste optional laden (ohne Fehler zu werfen)
     try {
-      const s3Result = await call('/api/list-s3');
+      const s3Result = await call('api/list-s3');
       if (s3Result.ok) {
         try {
           renderS3List(JSON.parse(s3Result.body));
@@ -402,7 +407,7 @@ async function applyProviderSettings() {
   setLoading(true);
   
   try {
-    const result = await call('/api/set-overrides', {
+    const result = await call('api/set-overrides', {
       body: JSON.stringify({
         s3_endpoint_url: endpoint,
         s3_region_name: region,
@@ -432,7 +437,7 @@ async function applyCredentials() {
   setLoading(true);
   
   try {
-    const result = await call('/api/set-overrides', {
+    const result = await call('api/set-overrides', {
       body: JSON.stringify({
         s3_bucket: bucket,
         access_key_id: accessKey,
@@ -466,7 +471,7 @@ async function restoreLocal() {
   setLoading(true);
   
   try {
-    const result = await call('/api/restore-local', {
+    const result = await call('api/restore-local', {
       body: JSON.stringify({ slug })
     });
     
@@ -490,7 +495,7 @@ async function restoreFromS3() {
   setLoading(true);
   
   try {
-    const result = await call('/api/restore-s3', {
+    const result = await call('api/restore-s3', {
       body: JSON.stringify({ key: s3key })
     });
     
@@ -508,7 +513,7 @@ async function showDebugLogs() {
   setLoading(true);
   
   try {
-    const result = await fetch('/api/debug-log');
+    const result = await fetch(resolvePath('api/debug-log'));
     const txt = await result.text();
     
     if (result.ok) {
