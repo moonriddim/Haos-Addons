@@ -16,10 +16,7 @@ function renderBackups(json) {
       <td>${formatBytes(sizeBytes)}</td>
       <td><span class="backup-type">${backup.type || 'Vollständig'}</span></td>
       <td class="text-right">
-        <div class="btn-group">
-          <button class="btn btn-secondary btn-sm restore-btn" data-slug="${backup.slug}">Auswählen</button>
-          <button class="btn btn-primary btn-sm upload-btn" data-slug="${backup.slug}">Hochladen</button>
-        </div>
+        <button class="btn btn-secondary btn-sm restore-btn" data-slug="${backup.slug}">Auswählen</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -38,35 +35,6 @@ function renderBackups(json) {
       if (tr) tr.classList.add('selected');
       btn.textContent = '✓ Ausgewählt';
       setTimeout(() => { btn.textContent = 'Auswählen'; }, 1500);
-    };
-  });
-
-  // Upload-Handler
-  tbody.querySelectorAll('.upload-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const slug = btn.getAttribute('data-slug');
-      out(`Lade Backup ${slug} zu S3 hoch...`);
-      setLoading(true);
-      btn.disabled = true;
-      const original = btn.textContent;
-      btn.textContent = 'Lädt...';
-      try {
-        const res = await call('api/upload', { body: JSON.stringify({ slug }) });
-        if (res.ok) {
-          try { const j = JSON.parse(res.body || '{}'); if (j.s3_key) out(`Upload abgeschlossen: s3://${j.s3_key}`); } catch (_) {}
-          out('Upload erfolgreich');
-          // S3-Liste aktualisieren
-          try { const s3Result = await call('api/list-s3'); if (s3Result.ok) renderS3List(JSON.parse(s3Result.body)); } catch (_) {}
-        } else {
-          out('Upload fehlgeschlagen');
-        }
-      } catch (e) {
-        out('Fehler beim Upload: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = original;
-        setLoading(false);
-      }
     };
   });
 
