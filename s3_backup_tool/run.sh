@@ -2,9 +2,24 @@
 
 set -u
 
-log_info() { bashio::log.info "$1"; }
-log_warn() { bashio::log.warning "$1"; }
-log_err() { bashio::log.error "$1"; }
+# Log-File für Frontend-Integration
+LOG_FILE="/data/s3_addon.log"
+
+# Erweiterte Logging-Funktionen die auch ins Frontend-Log schreiben
+log_info() { 
+  bashio::log.info "$1"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $1" >> "$LOG_FILE" 2>/dev/null || true
+}
+
+log_warn() { 
+  bashio::log.warning "$1"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: $1" >> "$LOG_FILE" 2>/dev/null || true
+}
+
+log_err() { 
+  bashio::log.error "$1"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> "$LOG_FILE" 2>/dev/null || true
+}
 
 require_bin() {
   local bin="$1"

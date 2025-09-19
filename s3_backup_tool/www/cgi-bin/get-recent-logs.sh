@@ -5,104 +5,89 @@ echo
 # Parameter für Log-Anzahl (default: 50 Zeilen)
 lines="${1:-50}"
 
-# Verschiedene Log-Quellen sammeln
-collect_logs() {
-  # 1. Supervisord Logs (Home Assistant Add-on Logs)
-  if [ -f "/proc/1/fd/1" ]; then
-    echo "=== ADDON LOGS ===" >&2
-    # Versuche die letzten Logs zu bekommen
-    # In Docker/Home Assistant Add-ons sind die Logs oft über journalctl verfügbar
-    if command -v journalctl >/dev/null 2>&1; then
-      journalctl -u s6-* --no-pager -n "$lines" --output cat 2>/dev/null | tail -n "$lines"
-    fi
-  fi
-  
-  # 2. Lighttpd Error Logs (falls vorhanden)
-  if [ -f "/tmp/lighttpd_error.log" ]; then
-    echo "=== LIGHTTPD ERRORS ===" >&2
-    tail -n 20 "/tmp/lighttpd_error.log" 2>/dev/null
-  fi
-  
-  # 3. Custom Log-Datei (falls wir eine erstellen)
-  if [ -f "/data/addon.log" ]; then
-    echo "=== CUSTOM LOGS ===" >&2
-    tail -n "$lines" "/data/addon.log" 2>/dev/null
-  fi
-  
-  # 4. Container-Logs (Docker logs)
-  # Diese sind schwer direkt zu lesen, aber wir können es versuchen
-  if [ -f "/var/log/messages" ]; then
-    echo "=== SYSTEM LOGS ===" >&2
-    tail -n 10 "/var/log/messages" 2>/dev/null | grep -i "s3\|backup\|upload" 2>/dev/null
-  fi
-}
+# EINFACHES LOG-SYSTEM: Lese von unserem eigenen Log-File
+LOG_FILE="/data/s3_addon.log"
 
-# Sammle alle verfügbaren Logs
-all_logs=""
-
-# Versuche über Docker Logs API (wenn verfügbar)
-if [ -n "${SUPERVISOR_TOKEN:-}" ] && command -v curl >/dev/null 2>&1; then
-  # Home Assistant Supervisor API für Add-on Logs
-  addon_logs=$(curl -sS -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
-                   "http://supervisor/addons/self/logs" 2>/dev/null || echo "")
-  
-  if [ -n "$addon_logs" ] && [ "$addon_logs" != "null" ]; then
-    all_logs="$addon_logs"
-  fi
+# Falls Log-File nicht existiert, erstelle es
+if [ ! -f "$LOG_FILE" ]; then
+  touch "$LOG_FILE" 2>/dev/null || {
+    # Falls /data nicht beschreibbar, verwende /tmp
+    LOG_FILE="/tmp/s3_addon.log"
+    touch "$LOG_FILE" 2>/dev/null
+  }
 fi
 
-# Fallback: Sammle andere Log-Quellen
-if [ -z "$all_logs" ]; then
-  all_logs=$(collect_logs 2>/dev/null || echo "No logs available")
+# Lese die letzten Zeilen aus dem Log-File
+if [ -f "$LOG_FILE" ]; then
+  recent_logs=$(tail -n "$lines" "$LOG_FILE" 2>/dev/null || echo "")
+else
+  recent_logs="Log-Datei nicht verfügbar"
 fi
 
-# Formatiere Logs als JSON Array
-format_logs_as_json() {
-  local logs="$1"
-  local json_array="[]"
+# Erstelle JSON Array aus Log-Zeilen
+create_json_logs() {
+  local log_content="$1"
+  local json_entries=""
   
-  # Teile in Zeilen und erstelle JSON Array
-  echo "$logs" | while IFS= read -r line; do
+  # Wenn keine Logs vorhanden, leeres Array
+  if [ -z "$log_content" ] || [ "$log_content" = "Log-Datei nicht verfügbar" ]; then
+    echo "[]"
+    return
+  fi
+  
+  # Verarbeite jede Log-Zeile
+  echo "$log_content" | while IFS= read -r line; do
     if [ -n "$line" ]; then
       # Escape JSON special characters
-      escaped_line=$(echo "$line" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/' | tr -d '\n')
-      timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      escaped_line=$(printf '%s' "$line" | sed 's/\\/\\\\/g; s/"/\\"/g')
       
-      # Bestimme Log-Level basierend auf Inhalt
-      level="info"
-      if echo "$line" | grep -i "error\|fail\|exception" >/dev/null; then
-        level="error"
-      elif echo "$line" | grep -i "warn\|warning" >/dev/null; then
-        level="warning"  
-      elif echo "$line" | grep -i "upload\|download\|backup\|success" >/dev/null; then
-        level="info"
-      fi
-      
-      # JSON Entry erstellen
-      json_entry="{\"timestamp\":\"$timestamp\",\"level\":\"$level\",\"message\":\"$escaped_line\"}"
-      
-      # Zum Array hinzufügen (vereinfacht)
-      if [ "$json_array" = "[]" ]; then
-        json_array="[$json_entry]"
+      # Extrahiere Timestamp falls vorhanden (Format: [YYYY-MM-DD HH:MM:SS] oder [HH:MM:SS])
+      timestamp=""
+      if echo "$line" | grep -q "^\[.*\]"; then
+        timestamp=$(echo "$line" | sed 's/^\[\([^]]*\)\].*/\1/')
       else
-        # Entferne schließende Klammer, füge Komma und neuen Eintrag hinzu
-        json_array=$(echo "$json_array" | sed 's/]$//')
-        json_array="$json_array,$json_entry]"
+        timestamp=$(date -u +"%Y-%m-%d %H:%M:%S")
       fi
+      
+      # Bestimme Log-Level
+      level="info"
+      if echo "$line" | grep -qi "error\|fail\|✗"; then
+        level="error"
+      elif echo "$line" | grep -qi "warn\|warning"; then
+        level="warning"
+      elif echo "$line" | grep -qi "✓\|success\|completed"; then
+        level="success"
+      fi
+      
+      # Ausgabe als JSON-Zeile für bessere Verarbeitung
+      printf '{"timestamp":"%s","level":"%s","message":"%s"}\n' "$timestamp" "$level" "$escaped_line"
     fi
-  done
-  
-  echo "$json_array"
+  done | {
+    # Sammle alle JSON-Zeilen und formatiere als Array
+    first=true
+    echo "["
+    while IFS= read -r json_line; do
+      if [ "$first" = "true" ]; then
+        first=false
+      else
+        echo ","
+      fi
+      printf '%s' "$json_line"
+    done
+    echo "]"
+  }
 }
 
-# Simple JSON Response mit Logs
+# Erstelle JSON Response
+json_logs=$(create_json_logs "$recent_logs")
+
+# Ausgabe
 cat << EOF
 {
   "status": "success",
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "logs": [
-$(echo "$all_logs" | tail -n "$lines" | sed 's/.*/"&",/' | sed '$s/,$//')
-  ],
-  "raw_logs": $(echo "$all_logs" | jq -R -s '.' 2>/dev/null || echo "\"$all_logs\"")
+  "log_file": "$LOG_FILE",
+  "lines_requested": $lines,
+  "logs": $json_logs
 }
 EOF
