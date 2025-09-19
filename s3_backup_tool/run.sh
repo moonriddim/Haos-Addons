@@ -192,6 +192,7 @@ url.rewrite-once = (
   "^/api/get-overrides$" => "/cgi-bin/get-overrides.sh",
     "^/api/debug-log$" => "/cgi-bin/debug-log.sh",
     "^/api/debug-sqlite$" => "/cgi-bin/debug-sqlite.sh",
+    "^/api/test-permissions$" => "/cgi-bin/test-permissions.sh",
     "^/api/backup-info$" => "/cgi-bin/backup-info.sh",
     "^/api/service$" => "/cgi-bin/service.sh"
 )

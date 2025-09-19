@@ -96,4 +96,31 @@ window.testSettingsPersistence = async function() {
   }
 };
 
+// Neue Funktion für Permissions-Test (global verfügbar machen)
+window.testPermissions = async function() {
+  out('Überprüfe Dateisystem-Permissions...');
+  setLoading(true);
+  try {
+    const result = await fetch(resolvePath('api/test-permissions'));
+    if (result.ok) {
+      const data = await result.text();
+      out('=== PERMISSIONS TEST ERGEBNIS ===');
+      // Teile die Zeilen auf und formatiere sie
+      const lines = data.split('\n');
+      lines.forEach(line => {
+        if (line.trim()) {
+          out(line);
+        }
+      });
+      out('=== ENDE PERMISSIONS TEST ===');
+    } else {
+      out(`Fehler beim Permissions-Test: HTTP ${result.status}`);
+    }
+  } catch (error) {
+    out(`Fehler: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
 

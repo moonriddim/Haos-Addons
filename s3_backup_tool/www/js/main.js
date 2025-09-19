@@ -62,12 +62,60 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-restore-s3').onclick = restoreFromS3;
   document.getElementById('btn-debug-log').onclick = showDebugLogs;
   
-  // SQLite Debug buttons
+  // SQLite Debug buttons - detailliertes Debugging
+  out('Lade Debug-Button-Handler...');
+  
   const btnSQLiteStatus = document.getElementById('btn-sqlite-status');
-  if (btnSQLiteStatus) btnSQLiteStatus.onclick = showSQLiteStatus;
+  out(`SQLite Status Button: ${btnSQLiteStatus ? 'gefunden' : 'NICHT GEFUNDEN'}`);
+  if (btnSQLiteStatus) {
+    btnSQLiteStatus.onclick = () => {
+      out('🗃️ SQLite Status Button geklickt');
+      console.log('SQLite Status button clicked');
+      if (window.showSQLiteStatus) {
+        window.showSQLiteStatus();
+      } else {
+        out('Fehler: showSQLiteStatus-Funktion nicht gefunden');
+        console.error('showSQLiteStatus function not found on window object');
+      }
+    };
+  }
   
   const btnTestPersistence = document.getElementById('btn-test-persistence'); 
-  if (btnTestPersistence) btnTestPersistence.onclick = testSettingsPersistence;
+  out(`Persistenz Test Button: ${btnTestPersistence ? 'gefunden' : 'NICHT GEFUNDEN'}`);
+  if (btnTestPersistence) {
+    btnTestPersistence.onclick = () => {
+      out('🧪 Persistenz Test Button geklickt');
+      console.log('Persistenz Test button clicked');
+      if (window.testSettingsPersistence) {
+        window.testSettingsPersistence();
+      } else {
+        out('Fehler: testSettingsPersistence-Funktion nicht gefunden');
+        console.error('testSettingsPersistence function not found on window object');
+      }
+    };
+  }
+  
+  const btnTestPermissions = document.getElementById('btn-test-permissions'); 
+  out(`Permissions Test Button: ${btnTestPermissions ? 'gefunden' : 'NICHT GEFUNDEN'}`);
+  if (btnTestPermissions) {
+    btnTestPermissions.onclick = () => {
+      out('🔐 Permissions Test Button geklickt');
+      console.log('Permissions Test button clicked');
+      if (window.testPermissions) {
+        window.testPermissions();
+      } else {
+        out('Fehler: testPermissions-Funktion nicht gefunden');
+        console.error('testPermissions function not found on window object');
+      }
+    };
+  }
+
+  // Zeige verfügbare Funktionen im window object
+  const debugFunctions = ['showSQLiteStatus', 'testSettingsPersistence', 'testPermissions'].filter(fn => window[fn]);
+  out(`Verfügbare Debug-Funktionen: ${debugFunctions.join(', ')}`);
+  if (debugFunctions.length === 0) {
+    out('⚠️ Keine Debug-Funktionen gefunden - möglicherweise Script-Ladung-Problem');
+  }
   out('S3 Backup Tool gestartet');
   setTimeout(refresh, 1000);
   document.addEventListener('keydown', (e) => {
