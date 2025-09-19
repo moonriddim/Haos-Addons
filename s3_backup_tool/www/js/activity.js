@@ -18,8 +18,8 @@ async function showDebugLogs() {
   }
 }
 
-// Neue Funktion für SQLite-Debug
-async function showSQLiteStatus() {
+// Neue Funktion für SQLite-Debug (global verfügbar machen)
+window.showSQLiteStatus = async function() {
   out('Überprüfe SQLite-Status...');
   setLoading(true);
   try {
@@ -48,10 +48,10 @@ async function showSQLiteStatus() {
   } finally {
     setLoading(false);
   }
-}
+};
 
-// Funktion zum Testen der Settings-Persistenz
-async function testSettingsPersistence() {
+// Funktion zum Testen der Settings-Persistenz (global verfügbar machen)
+window.testSettingsPersistence = async function() {
   out('Teste Settings-Persistenz...');
   setLoading(true);
   
@@ -94,6 +94,6 @@ async function testSettingsPersistence() {
   } finally {
     setLoading(false);
   }
-}
+};
 
 
