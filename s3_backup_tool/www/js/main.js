@@ -153,6 +153,31 @@ window.testPermissions = async function() {
   }
 };
 
+window.debugSaveLoad = async function() {
+  out('Teste Save/Load-Logik im Detail...');
+  setLoading(true);
+  try {
+    const result = await fetch(resolvePath('api/debug-save-load'));
+    if (result.ok) {
+      const data = await result.text();
+      out('=== SAVE/LOAD DEBUG ERGEBNIS ===');
+      const lines = data.split('\n');
+      lines.forEach(line => {
+        if (line.trim()) {
+          out(line);
+        }
+      });
+      out('=== ENDE SAVE/LOAD DEBUG ===');
+    } else {
+      out(`Fehler beim Save/Load-Debug: HTTP ${result.status}`);
+    }
+  } catch (error) {
+    out(`Fehler: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   initializeProviders();
@@ -211,8 +236,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  const btnDebugSaveLoad = document.getElementById('btn-debug-save-load'); 
+  out(`Save/Load Debug Button: ${btnDebugSaveLoad ? 'gefunden' : 'NICHT GEFUNDEN'}`);
+  if (btnDebugSaveLoad) {
+    btnDebugSaveLoad.onclick = () => {
+      out('🔬 Save/Load Debug Button geklickt');
+      console.log('Save/Load Debug button clicked');
+      if (window.debugSaveLoad) {
+        window.debugSaveLoad();
+      } else {
+        out('Fehler: debugSaveLoad-Funktion nicht gefunden');
+        console.error('debugSaveLoad function not found on window object');
+      }
+    };
+  }
+
   // Zeige verfügbare Funktionen im window object
-  const debugFunctions = ['showSQLiteStatus', 'testSettingsPersistence', 'testPermissions'].filter(fn => window[fn]);
+  const debugFunctions = ['showSQLiteStatus', 'testSettingsPersistence', 'testPermissions', 'debugSaveLoad'].filter(fn => window[fn]);
   out(`Verfügbare Debug-Funktionen: ${debugFunctions.join(', ')}`);
   if (debugFunctions.length === 0) {
     out('⚠️ Keine Debug-Funktionen gefunden - möglicherweise Script-Ladung-Problem');
