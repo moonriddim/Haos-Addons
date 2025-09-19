@@ -61,6 +61,13 @@ if command -v sqlite3 >/dev/null 2>&1; then
   saved_count=0
   for k in $keys; do
     v=$(printf '%s' "$incoming" | jq -c --arg k "$k" '.[$k]' 2>/dev/null)
+    # KRITISCHER FIX: Secret Access Key behandeln - leere Strings nicht überschreiben
+    # Für secret_access_key: nur schreiben wenn nicht leer (sonst bestehenden Wert beibehalten)
+    if [ "$k" = "secret_access_key" ] && printf '%s' "$v" | jq -e '. == "" or . == null' >/dev/null 2>&1; then
+      echo "DEBUG: Skipping empty secret_access_key to preserve existing value" >&2
+      continue
+    fi
+    
     # Nur nicht-leere Werte schreiben (wie oben)
     if printf '%s' "$v" | jq -e 'if type=="string" then .!="" else .!=null end' >/dev/null 2>&1; then
       # Einfache SQL-Quoting-Regel: single quotes verdoppeln

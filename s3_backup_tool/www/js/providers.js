@@ -215,13 +215,24 @@ function initializeProviders() {
         const combined = {
           // Zugangsdaten
           s3_bucket: document.getElementById('bucket-input')?.value || '',
-          access_key_id: document.getElementById('ak-input')?.value || '',
-          secret_access_key: document.getElementById('sk-input')?.value || '',
-          // Provider
+          access_key_id: document.getElementById('ak-input')?.value || ''
+        };
+        
+        // KRITISCHER FIX: Secret Access Key nur senden, wenn nicht leer (sonst bestehenden Wert beibehalten)
+        const secretKeyValue = document.getElementById('sk-input')?.value || '';
+        if (secretKeyValue.trim() !== '') {
+          combined.secret_access_key = secretKeyValue;
+        } else {
+          // Nicht senden = bestehenden Wert in DB beibehalten
+          out('Secret Key leer - bestehender Wert wird beibehalten');
+        }
+        
+        // Provider-Einstellungen
+        Object.assign(combined, {
           s3_endpoint_url: endpoint,
           force_path_style: pathStyle,
           s3_prefix: prefixInput ? prefixInput.value : ''
-        };
+        });
         if (caps.region && region) combined.s3_region_name = region;
         if (Array.isArray(caps.sse) && caps.sse.length > 0) combined.s3_sse = sse || '';
         if (caps.kms) combined.s3_sse_kms_key_id = kms || '';
@@ -308,15 +319,27 @@ function initializeProviders() {
       const skEl = document.getElementById('sk-input');
       if (bucketEl && o.s3_bucket) bucketEl.value = o.s3_bucket;
       if (akEl && o.access_key_id) akEl.value = o.access_key_id;
-      // Secret nicht anzeigen – beim Speichern bleibt es durch Backend-Logik erhalten, wenn leer
+      
+      // WICHTIG: Secret Key aus Sicherheitsgründen nicht laden/anzeigen
+      // Aber zeige einen Hinweis, wenn einer gespeichert ist
+      if (skEl) {
+        if (o.secret_access_key && o.secret_access_key.trim() !== '') {
+          skEl.placeholder = '••••••••••••••••••••••••••••••••••••••••••••••••••• (gespeichert)';
+        } else {
+          skEl.placeholder = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY';
+        }
+      }
 
       // Provider Felder
       if (endpointInput && o.s3_endpoint_url) { endpointInput.value = o.s3_endpoint_url; }
       if (prefixInput && typeof o.s3_prefix === 'string') { prefixInput.value = o.s3_prefix; }
 
       if (typeof o.force_path_style !== 'undefined') {
-        const v = String(o.force_path_style).toLowerCase();
-        document.getElementById('fps-input').checked = (v === 'true' || v === '1');
+        // Verwende die gleiche Boolean-Logik wie für andere Checkboxen
+        const fpsEl = document.getElementById('fps-input');
+        if (fpsEl) {
+          fpsEl.checked = (o.force_path_style === true || o.force_path_style === 'true' || o.force_path_style === '1' || o.force_path_style === 1);
+        }
       }
 
       if (regionInput && (o.s3_region_name || o.s3_region_name === '')) {
@@ -332,10 +355,21 @@ function initializeProviders() {
       const verEl = document.getElementById('versioning-input');
       if (sseSel && typeof o.s3_sse !== 'undefined') sseSel.value = o.s3_sse || '';
       if (kmsEl && typeof o.s3_sse_kms_key_id !== 'undefined') kmsEl.value = o.s3_sse_kms_key_id || '';
-      if (verEl && typeof o.enable_versioning !== 'undefined') verEl.checked = !!o.enable_versioning;
+      if (verEl && typeof o.enable_versioning !== 'undefined') {
+        verEl.checked = (o.enable_versioning === true || o.enable_versioning === 'true' || o.enable_versioning === '1' || o.enable_versioning === 1);
+      }
 
-      // Backup Automatik / Retention
-      const setIf = (id, val) => { const el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = !!val; else if (typeof val !== 'undefined' && val !== null) el.value = val; };
+      // Backup Automatik / Retention (Fix: Boolean-Werte korrekt verarbeiten)
+      const setIf = (id, val) => { 
+        const el = document.getElementById(id); 
+        if (!el) return; 
+        if (el.type === 'checkbox') {
+          // Korrekte Boolean-Konvertierung: nur true, "true", "1", 1 sind wahr
+          el.checked = (val === true || val === 'true' || val === '1' || val === 1);
+        } else if (typeof val !== 'undefined' && val !== null) {
+          el.value = val; 
+        }
+      };
       setIf('watch-ha-input', o.watch_ha_backups);
       setIf('upload-existing-input', o.upload_existing);
       setIf('delete-local-input', o.delete_local_after_upload);
