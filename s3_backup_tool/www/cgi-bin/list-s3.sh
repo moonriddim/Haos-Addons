@@ -5,12 +5,6 @@ echo
 # Dieses CGI listet Objekte im konfigurierten Bucket/Prefix.
 # Verwendet die zur Laufzeit gesetzten AWS_* Variablen aus run.sh Umgebung.
 
-# Versuche, Prefix aus /data/overrides.json zu lesen, falls vorhanden
-PFX=""
-if [ -f /data/overrides.json ]; then
-  PFX=$(jq -r '.s3_prefix // empty' /data/overrides.json 2>/dev/null)
-fi
-
 # Supervisor-Umgebung stellt keine direkten Vars bereit; run.sh setzt sie zur Laufzeit.
 # Hier verlassen wir uns auf die env des lighttpd-Prozesses (vererbt vom run.sh Start).
 

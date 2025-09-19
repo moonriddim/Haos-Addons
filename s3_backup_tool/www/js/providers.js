@@ -189,23 +189,50 @@ function initializeProviders() {
   const btnClearCreds = document.getElementById('btn-clear-credentials');
   if (btnSaveClose && summaryCard && editWrapper) {
     btnSaveClose.onclick = async () => {
-      // Speichere beide Bereiche in einem Schritt
-      await applyProviderSettings();
-      // Zugangsdaten und Backup-Einstellungen in EINEM Request speichern (robuster gegen Abbruch)
+      // Speichere alle Bereiche in EINEM Request (robust, verhindert doppelte Calls)
       try {
+        const providerId = (selectedPreset && selectedPreset.id) || document.querySelector('.provider-card.active')?.dataset.provider || 'aws';
+        const caps = (typeof capsByProvider !== 'undefined' ? capsByProvider[providerId] : null) || {};
+        const regionInput = document.getElementById('region-input');
+        const regionSelect = document.getElementById('region-select');
+        const endpointInput = document.getElementById('endpoint-input');
+        const prefixInput = document.getElementById('prefix-input');
+        const pathStyleCheckbox = document.getElementById('fps-input');
+        const sseSelect = document.getElementById('sse-select');
+        const kmsInput = document.getElementById('kms-input');
+        const versioningCheckbox = document.getElementById('versioning-input');
+
+        const region = (regionInput?.value && regionInput.value.trim()) || regionSelect?.value || (selectedPreset && selectedPreset.rg) || '';
+        const endpoint = endpointInput?.value || (selectedPreset && selectedPreset.ep) || '';
+        const pathStyle = !!(pathStyleCheckbox && pathStyleCheckbox.checked);
+        const sse = sseSelect ? sseSelect.value : '';
+        const kms = kmsInput ? kmsInput.value.trim() : '';
+        const enableVersioning = !!(versioningCheckbox && versioningCheckbox.checked);
+
         const combined = {
+          // Zugangsdaten
           s3_bucket: document.getElementById('bucket-input')?.value || '',
           access_key_id: document.getElementById('ak-input')?.value || '',
           secret_access_key: document.getElementById('sk-input')?.value || '',
-          watch_ha_backups: !!document.getElementById('watch-ha-input')?.checked,
-          upload_existing: !!document.getElementById('upload-existing-input')?.checked,
-          delete_local_after_upload: !!document.getElementById('delete-local-input')?.checked,
-          run_on_start: !!document.getElementById('run-on-start-input')?.checked,
-          backup_interval_hours: document.getElementById('interval-input')?.value || null,
-          backup_schedule_cron: document.getElementById('cron-input')?.value || null,
-          retention_keep_last_s3: document.getElementById('keep-last-input')?.value || null,
-          retention_days_s3: document.getElementById('retention-days-input')?.value || null
+          // Provider
+          s3_endpoint_url: endpoint,
+          force_path_style: pathStyle,
+          s3_prefix: prefixInput ? prefixInput.value : ''
         };
+        if (caps.region && region) combined.s3_region_name = region;
+        if (Array.isArray(caps.sse) && caps.sse.length > 0) combined.s3_sse = sse || '';
+        if (caps.kms) combined.s3_sse_kms_key_id = kms || '';
+        if (caps.versioning) combined.enable_versioning = enableVersioning;
+        // Backup-Einstellungen
+        combined.watch_ha_backups = !!document.getElementById('watch-ha-input')?.checked;
+        combined.upload_existing = !!document.getElementById('upload-existing-input')?.checked;
+        combined.delete_local_after_upload = !!document.getElementById('delete-local-input')?.checked;
+        combined.run_on_start = !!document.getElementById('run-on-start-input')?.checked;
+        combined.backup_interval_hours = document.getElementById('interval-input')?.value || null;
+        combined.backup_schedule_cron = document.getElementById('cron-input')?.value || null;
+        combined.retention_keep_last_s3 = document.getElementById('keep-last-input')?.value || null;
+        combined.retention_days_s3 = document.getElementById('retention-days-input')?.value || null;
+
         await call('api/set-overrides', { body: JSON.stringify(combined) });
         out('Einstellungen gespeichert');
       } catch (e) {

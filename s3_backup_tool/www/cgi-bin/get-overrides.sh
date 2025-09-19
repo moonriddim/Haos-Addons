@@ -2,10 +2,21 @@
 echo "Content-Type: application/json"
 echo
 
-# Liefert den aktuellen Inhalt von /data/overrides.json (oder {} wenn nicht vorhanden)
-FILE="/data/overrides.json"
-if [ -f "$FILE" ]; then
-  cat "$FILE" 2>/dev/null | jq -c '.' 2>/dev/null || echo '{}'
+DB="/data/overrides.db"
+
+if [ -f "$DB" ] && command -v sqlite3 >/dev/null 2>&1; then
+  tmp='{}'
+  while IFS=$(printf '\t') read -r k v; do
+    [ -n "$k" ] || continue
+    if printf '%s' "$v" | jq -e '.' >/dev/null 2>&1; then
+      tmp=$(printf '%s' "$tmp" | jq --arg k "$k" --argjson v "$v" '. + {($k): $v}' 2>/dev/null || printf '%s' "$tmp")
+    else
+      tmp=$(printf '%s' "$tmp" | jq --arg k "$k" --arg v "$v" '. + {($k): $v}' 2>/dev/null || printf '%s' "$tmp")
+    fi
+  done <<EOF
+$(sqlite3 -separator "$(printf '\t')" "$DB" "SELECT key, value FROM kv;" 2>/dev/null)
+EOF
+  echo "$tmp"
 else
   echo '{}'
 fi

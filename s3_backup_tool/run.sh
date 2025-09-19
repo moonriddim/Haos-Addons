@@ -70,38 +70,43 @@ refresh_runtime_config() {
 }
 
 load_overrides() {
-  local f="/data/overrides.json"
-  if [[ -f "$f" ]]; then
-    local ep rg fps bkt pfx ak sk vssl acb
-    ep=$(jq -r '.s3_endpoint_url // empty' "$f" 2>/dev/null || true)
-    rg=$(jq -r '.s3_region_name // empty' "$f" 2>/dev/null || true)
-    fps=$(jq -r '.force_path_style // empty' "$f" 2>/dev/null || true)
-    bkt=$(jq -r '.s3_bucket // empty' "$f" 2>/dev/null || true)
-    pfx=$(jq -r '.s3_prefix // empty' "$f" 2>/dev/null || true)
-    ak=$(jq -r '.access_key_id // empty' "$f" 2>/dev/null || true)
-    sk=$(jq -r '.secret_access_key // empty' "$f" 2>/dev/null || true)
-    vssl=$(jq -r '.verify_ssl // empty' "$f" 2>/dev/null || true)
-    acb=$(jq -r '.auto_create_bucket // empty' "$f" 2>/dev/null || true)
-  sse=$(jq -r '.s3_sse // empty' "$f" 2>/dev/null || true)
-  kms=$(jq -r '.s3_sse_kms_key_id // empty' "$f" 2>/dev/null || true)
-  ev=$(jq -r '.enable_versioning // empty' "$f" 2>/dev/null || true)
-  wh=$(jq -r '.watch_ha_backups // empty' "$f" 2>/dev/null || true)
-  ue=$(jq -r '.upload_existing // empty' "$f" 2>/dev/null || true)
-    if [[ -n "$ep" ]]; then S3_ENDPOINT_URL="$ep"; fi
-    if [[ -n "$rg" ]]; then S3_REGION_NAME="$rg"; fi
-    if [[ -n "$fps" ]]; then FORCE_PATH_STYLE="$fps"; fi
-    if [[ -n "$bkt" ]]; then S3_BUCKET="$bkt"; fi
-    if [[ -n "$pfx" ]]; then S3_PREFIX="$pfx"; fi
-    if [[ -n "$ak" ]]; then ACCESS_KEY_ID="$ak"; fi
-    if [[ -n "$sk" ]]; then SECRET_ACCESS_KEY="$sk"; fi
-    if [[ -n "$vssl" ]]; then VERIFY_SSL="$vssl"; fi
-    if [[ -n "$acb" ]]; then AUTO_CREATE_BUCKET="$acb"; fi
-  if [[ -n "$sse" ]]; then S3_SSE="$sse"; fi
-  if [[ -n "$kms" ]]; then S3_SSE_KMS_KEY_ID="$kms"; fi
-  if [[ -n "$ev" ]]; then ENABLE_VERSIONING="$ev"; fi
-  if [[ -n "$wh" ]]; then WATCH_HA_BACKUPS="$wh"; fi
-  if [[ -n "$ue" ]]; then UPLOAD_EXISTING="$ue"; fi
-    log_info "Applied provider overrides from /data/overrides.json"
+  local db="/data/overrides.db"
+  if [[ -f "$db" ]] && command -v sqlite3 >/dev/null 2>&1; then
+    # Helfer: Wert aus DB lesen und JSON-dekodiert in Variable schreiben (nur wenn gesetzt)
+    _assign_if_present() {
+      local var_name="$1"
+      local key_name="$2"
+      local raw dec
+      raw=$(sqlite3 "$db" "SELECT value FROM kv WHERE key = '$key_name' LIMIT 1;" 2>/dev/null || true)
+      if [[ -n "$raw" ]]; then
+        dec=$(jq -r '.' <<<"$raw" 2>/dev/null || true)
+        if [[ -n "$dec" ]]; then
+          printf -v "$var_name" '%s' "$dec"
+        fi
+      fi
+    }
+
+    _assign_if_present S3_ENDPOINT_URL s3_endpoint_url
+    _assign_if_present S3_REGION_NAME s3_region_name
+    _assign_if_present FORCE_PATH_STYLE force_path_style
+    _assign_if_present S3_BUCKET s3_bucket
+    _assign_if_present S3_PREFIX s3_prefix
+    _assign_if_present ACCESS_KEY_ID access_key_id
+    _assign_if_present SECRET_ACCESS_KEY secret_access_key
+    _assign_if_present VERIFY_SSL verify_ssl
+    _assign_if_present AUTO_CREATE_BUCKET auto_create_bucket
+    _assign_if_present S3_SSE s3_sse
+    _assign_if_present S3_SSE_KMS_KEY_ID s3_sse_kms_key_id
+    _assign_if_present ENABLE_VERSIONING enable_versioning
+    _assign_if_present WATCH_HA_BACKUPS watch_ha_backups
+    _assign_if_present UPLOAD_EXISTING upload_existing
+    _assign_if_present BACKUP_INTERVAL_HOURS backup_interval_hours
+    _assign_if_present BACKUP_SCHEDULE_CRON backup_schedule_cron
+    _assign_if_present RUN_ON_START run_on_start
+    _assign_if_present RETENTION_KEEP_LAST_S3 retention_keep_last_s3
+    _assign_if_present RETENTION_DAYS_S3 retention_days_s3
+
+    log_info "Applied overrides from SQLite (/data/overrides.db)"
   fi
 }
 
@@ -152,14 +157,12 @@ alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 
 # API-Umschreibung mit besserer Syntax
 url.rewrite-once = (
-  "^/api/backup$" => "/cgi-bin/backup.sh",
   "^/api/list$" => "/cgi-bin/list.sh",
   "^/api/list-s3$" => "/cgi-bin/list-s3.sh",
   "^/api/restore-local$" => "/cgi-bin/restore-local.sh",
   "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
   "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
   "^/api/get-overrides$" => "/cgi-bin/get-overrides.sh",
-  "^/api/log$" => "/cgi-bin/log.sh",
     "^/api/debug-log$" => "/cgi-bin/debug-log.sh",
     "^/api/backup-info$" => "/cgi-bin/backup-info.sh",
     "^/api/service$" => "/cgi-bin/service.sh"
@@ -723,14 +726,12 @@ alias.url = ( "/cgi-bin/" => "/www/cgi-bin/" )
 
 # API-Umschreibung mit besserer Syntax
 url.rewrite-once = (
-  "^/api/backup$" => "/cgi-bin/backup.sh",
   "^/api/list$" => "/cgi-bin/list.sh",
   "^/api/list-s3$" => "/cgi-bin/list-s3.sh",
   "^/api/restore-local$" => "/cgi-bin/restore-local.sh",
   "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
   "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
   "^/api/get-overrides$" => "/cgi-bin/get-overrides.sh",
-  "^/api/log$" => "/cgi-bin/log.sh",
     "^/api/debug-log$" => "/cgi-bin/debug-log.sh",
     "^/api/backup-info$" => "/cgi-bin/backup-info.sh"
 )

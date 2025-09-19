@@ -3,42 +3,44 @@ echo "Content-Type: application/json"
 echo
 
 # Gesamten Request-Body lesen (robust auch ohne Newline)
-body="$(cat)"
+# Body robust lesen (CGI: bevorzugt CONTENT_LENGTH)
+if [ -n "${CONTENT_LENGTH:-}" ] 2>/dev/null; then
+  body="$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)"
+else
+  body="$(cat)"
+fi
 
 mkdir -p /data
-dest=/data/overrides.json
-tmpfile="${dest}.tmp"
+db="/data/overrides.db"
 
-# bestehende Datei lesen, falls vorhanden
-if [ -f "$dest" ]; then
-  base="$(cat "$dest")"
-else
-  base='{}'
-fi
+base='{}'
 
 # Eingehenden JSON-Body validieren
 incoming="${body:-{}}"
+# Bei ungültigem JSON: wie leeres Objekt behandeln (robuster gegen Transport-Besonderheiten)
 if ! printf '%s' "$incoming" | jq -e '.' >/dev/null 2>&1; then
-  echo '{"error":"invalid json"}'
-  exit 0
+  incoming='{}'
 fi
 
 # Nur Felder updaten, die im Request vorhanden sind:
 # - Strings: nur wenn nicht leer
 # - Booleans/Numbers: auch false/0 werden übernommen
-if echo "$base" | jq \
-  --argjson incoming "$incoming" \
-  '
-  def nonempty(v):
-    if (v|type) == "string" then (v != "")
-    else v != null end;
-  . as $base
-  | ($incoming // {}) as $i
-  | $base * ($i | with_entries(select(nonempty(.value))))
-  ' > "$tmpfile" 2>/dev/null; then
-  mv "$tmpfile" "$dest" 2>/dev/null || { echo '{"error":"write_failed"}'; exit 0; }
+# Nur DB: direkt in SQLite upserten
+if command -v sqlite3 >/dev/null 2>&1; then
+  sqlite3 "$db" "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);" 2>/dev/null || true
+  keys=$(printf '%s' "$incoming" | jq -r 'keys[]' 2>/dev/null)
+  for k in $keys; do
+    v=$(printf '%s' "$incoming" | jq -c --arg k "$k" '.[$k]' 2>/dev/null)
+    # Nur nicht-leere Werte schreiben (wie oben)
+    if printf '%s' "$v" | jq -e 'if type=="string" then .!="" else .!=null end' >/dev/null 2>&1; then
+      sqlite3 "$db" "INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value;" 2>/dev/null <<EOF
+$k
+$v
+EOF
+    fi
+  done
   echo '{"status":"ok"}'
 else
-  echo '{"error":"jq_failed"}'
+  echo '{"error":"sqlite_unavailable"}'
 fi
 
