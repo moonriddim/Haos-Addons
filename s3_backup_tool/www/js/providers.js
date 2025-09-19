@@ -198,6 +198,21 @@ function initializeProviders() {
           access_key_id: document.getElementById('ak-input')?.value || '',
           secret_access_key: document.getElementById('sk-input')?.value || ''
         };
+        // Direct-Backup-Einstellungen anhängen
+        const directEnabled = !!document.getElementById('direct-enabled-input')?.checked;
+        const directInterval = document.getElementById('direct-interval-input')?.value || null;
+        const directCron = document.getElementById('direct-cron-input')?.value || null;
+        const directName = document.getElementById('direct-name-input')?.value || null;
+        const sources = [];
+        if (document.getElementById('direct-src-config')?.checked) sources.push('config');
+        if (document.getElementById('direct-src-media')?.checked) sources.push('media');
+        if (document.getElementById('direct-src-share')?.checked) sources.push('share');
+        if (document.getElementById('direct-src-ssl')?.checked) sources.push('ssl');
+        body.direct_enabled = directEnabled;
+        if (directInterval) body.direct_interval_hours = directInterval;
+        if (directCron) body.direct_schedule_cron = directCron;
+        if (directName) body.direct_name_template = directName;
+        if (sources.length) body.direct_sources = sources;
         await call('api/set-overrides', { body: JSON.stringify(body) });
         out('Zugangsdaten gespeichert');
       } catch (e) {
@@ -305,6 +320,18 @@ function initializeProviders() {
       setIf('cron-input', o.backup_schedule_cron);
       setIf('keep-last-input', o.retention_keep_last_s3);
       setIf('retention-days-input', o.retention_days_s3);
+
+      // Direct Backup Einstellungen
+      setIf('direct-enabled-input', o.direct_enabled);
+      setIf('direct-interval-input', o.direct_interval_hours);
+      setIf('direct-cron-input', o.direct_schedule_cron);
+      setIf('direct-name-input', o.direct_name_template);
+      const srcs = Array.isArray(o.direct_sources) ? o.direct_sources : [];
+      const mark = (id, key) => { const el = document.getElementById(id); if (el) el.checked = srcs.includes(key); };
+      mark('direct-src-config', 'config');
+      mark('direct-src-media', 'media');
+      mark('direct-src-share', 'share');
+      mark('direct-src-ssl', 'ssl');
 
       loadSummaryFromOverrides();
       out('Gespeicherte Einstellungen geladen');

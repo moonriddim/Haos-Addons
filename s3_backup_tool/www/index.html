@@ -76,11 +76,38 @@
               <p class="card-description">Verwalte lokale Backups und starte neue Sicherungen</p>
             </div>
             <div class="card-content">
-              <div class="form-actions" style="justify-content:space-between">
-                <div></div>
+              <div class="form-actions" style="justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
+                <div class="direct-upload-options" style="display:flex;flex-direction:column;gap:8px">
+                  <div class="text-muted" style="margin-bottom:4px">Direkter Upload: Quellen auswählen</div>
+                  <div style="display:flex;gap:12px;flex-wrap:wrap">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="du-src-config" class="form-checkbox" checked />
+                      <span class="checkbox-indicator"></span>
+                      /config
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="du-src-media" class="form-checkbox" />
+                      <span class="checkbox-indicator"></span>
+                      /media
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="du-src-share" class="form-checkbox" />
+                      <span class="checkbox-indicator"></span>
+                      /share
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="du-src-ssl" class="form-checkbox" />
+                      <span class="checkbox-indicator"></span>
+                      /ssl
+                    </label>
+                  </div>
+                  <div class="input-group" style="max-width:420px">
+                    <input id="du-name" type="text" class="form-input" placeholder="direct_YYYY-MM-DD_HH-mm-ss" />
+                  </div>
+                </div>
                 <div>
                   <button id="btn-refresh-local" class="btn btn-secondary">Aktualisieren</button>
-                  <button id="btn-backup-local" class="btn btn-primary">Backup starten</button>
+                  <button id="btn-direct-upload" class="btn btn-primary">Direkt hochladen</button>
                 </div>
               </div>
               <div class="table-container" style="margin-top:12px">
@@ -305,6 +332,51 @@
 
               <div class="form-actions" style="display:none">
                 <button id="btn-apply-backup" class="btn btn-primary">(hidden)</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Direkt-Backup Zeitplan</h3>
+              <p class="card-description">Erstellt ein Tar aus ausgewählten Quellen und lädt es direkt zu S3 hoch</p>
+            </div>
+            <div class="card-content">
+              <div class="form-grid">
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="direct-enabled-input" class="form-checkbox" />
+                    <span class="checkbox-indicator"></span>
+                    Direkt-Backups aktivieren
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label for="direct-interval-input" class="form-label">Intervall (Stunden)</label>
+                  <input id="direct-interval-input" type="number" min="1" step="1" class="form-input" placeholder="24" />
+                  <p class="form-hint">Leer lassen, wenn Cron verwendet wird.</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="direct-cron-input" class="form-label">Cron Ausdruck</label>
+                  <input id="direct-cron-input" type="text" class="form-input" placeholder="0 4 * * *" />
+                  <p class="form-hint">Überschreibt das Intervall, wenn gesetzt.</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="direct-name-input" class="form-label">Namensschema</label>
+                  <input id="direct-name-input" type="text" class="form-input" placeholder="direct_{date}" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Quellen</label>
+                  <div style="display:flex;gap:12px;flex-wrap:wrap">
+                    <label class="checkbox-label"><input type="checkbox" id="direct-src-config" class="form-checkbox" checked /><span class="checkbox-indicator"></span> /config</label>
+                    <label class="checkbox-label"><input type="checkbox" id="direct-src-media" class="form-checkbox" /><span class="checkbox-indicator"></span> /media</label>
+                    <label class="checkbox-label"><input type="checkbox" id="direct-src-share" class="form-checkbox" /><span class="checkbox-indicator"></span> /share</label>
+                    <label class="checkbox-label"><input type="checkbox" id="direct-src-ssl" class="form-checkbox" /><span class="checkbox-indicator"></span> /ssl</label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

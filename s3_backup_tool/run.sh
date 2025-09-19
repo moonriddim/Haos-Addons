@@ -45,6 +45,11 @@ S3_SSE="$(bashio::config 's3_sse')"
 S3_SSE_KMS_KEY_ID="$(bashio::config 's3_sse_kms_key_id')"
 ENABLE_VERSIONING="$(bashio::config 'enable_versioning')"
 BACKUP_SCHEDULE_CRON="$(bashio::config 'backup_schedule_cron')"
+DIRECT_ENABLED="$(bashio::config 'direct_enabled')"
+DIRECT_INTERVAL_HOURS="$(bashio::config 'direct_interval_hours')"
+DIRECT_SCHEDULE_CRON="$(bashio::config 'direct_schedule_cron')"
+DIRECT_NAME_TEMPLATE="$(bashio::config 'direct_name_template')"
+DIRECT_SOURCES_JSON="$(bashio::config 'direct_sources')"
 ENABLE_RESTORE_HELPER="$(bashio::config 'enable_restore_helper')"
 RESTORE_SLUG="$(bashio::config 'restore_slug')"
 RESTORE_FROM_S3_KEY="$(bashio::config 'restore_from_s3_key')"
@@ -65,6 +70,11 @@ refresh_runtime_config() {
   AUTO_CREATE_BUCKET="$(bashio::config 'auto_create_bucket')"
   BACKUP_INTERVAL_HOURS="$(bashio::config 'backup_interval_hours')"
   BACKUP_SCHEDULE_CRON="$(bashio::config 'backup_schedule_cron')"
+  DIRECT_ENABLED="$(bashio::config 'direct_enabled')"
+  DIRECT_INTERVAL_HOURS="$(bashio::config 'direct_interval_hours')"
+  DIRECT_SCHEDULE_CRON="$(bashio::config 'direct_schedule_cron')"
+  DIRECT_NAME_TEMPLATE="$(bashio::config 'direct_name_template')"
+  DIRECT_SOURCES_JSON="$(bashio::config 'direct_sources')"
   # Overrides anwenden (falls vorhanden)
   load_overrides
 }
@@ -87,6 +97,11 @@ load_overrides() {
   ev=$(jq -r '.enable_versioning // empty' "$f" 2>/dev/null || true)
   wh=$(jq -r '.watch_ha_backups // empty' "$f" 2>/dev/null || true)
   ue=$(jq -r '.upload_existing // empty' "$f" 2>/dev/null || true)
+  dEnabled=$(jq -r '.direct_enabled // empty' "$f" 2>/dev/null || true)
+  dInterval=$(jq -r '.direct_interval_hours // empty' "$f" 2>/dev/null || true)
+  dCron=$(jq -r '.direct_schedule_cron // empty' "$f" 2>/dev/null || true)
+  dName=$(jq -r '.direct_name_template // empty' "$f" 2>/dev/null || true)
+  dSrc=$(jq -c '.direct_sources // empty' "$f" 2>/dev/null || true)
     if [[ -n "$ep" ]]; then S3_ENDPOINT_URL="$ep"; fi
     if [[ -n "$rg" ]]; then S3_REGION_NAME="$rg"; fi
     if [[ -n "$fps" ]]; then FORCE_PATH_STYLE="$fps"; fi
@@ -101,6 +116,11 @@ load_overrides() {
   if [[ -n "$ev" ]]; then ENABLE_VERSIONING="$ev"; fi
   if [[ -n "$wh" ]]; then WATCH_HA_BACKUPS="$wh"; fi
   if [[ -n "$ue" ]]; then UPLOAD_EXISTING="$ue"; fi
+  if [[ -n "$dEnabled" ]]; then DIRECT_ENABLED="$dEnabled"; fi
+  if [[ -n "$dInterval" ]]; then DIRECT_INTERVAL_HOURS="$dInterval"; fi
+  if [[ -n "$dCron" ]]; then DIRECT_SCHEDULE_CRON="$dCron"; fi
+  if [[ -n "$dName" ]]; then DIRECT_NAME_TEMPLATE="$dName"; fi
+  if [[ -n "$dSrc" ]]; then DIRECT_SOURCES_JSON="$dSrc"; fi
     log_info "Applied provider overrides from /data/overrides.json"
   fi
 }
@@ -468,6 +488,69 @@ run_interval_scheduler() {
     create_backup || log_err "Scheduled backup (interval) failed"
   done
 }
+run_direct_interval_scheduler() {
+  local interval_sec
+  interval_sec=$(( DIRECT_INTERVAL_HOURS * 3600 ))
+  log_info "Direct scheduler active: every ${DIRECT_INTERVAL_HOURS}h"
+  while true; do
+    sleep "$interval_sec"
+    run_direct_backup || log_err "Scheduled direct backup failed"
+  done
+}
+
+run_direct_cron_scheduler() {
+  require_bin crond || true
+  if ! command -v crond >/dev/null 2>&1; then
+    log_err "crond not available. Falling back to direct interval mode."
+    run_direct_interval_scheduler
+    return
+  fi
+  local cron_expr tmp_cron
+  cron_expr="$DIRECT_SCHEDULE_CRON"
+  tmp_cron="/etc/crontabs/root"
+  echo "$cron_expr /run.sh --direct-oneshot" > "$tmp_cron"
+  log_info "Direct cron scheduler active: '$cron_expr'"
+  crond -f -l 8
+}
+
+start_direct_scheduler() {
+  if [[ "${DIRECT_ENABLED,,}" != "true" ]]; then
+    return
+  fi
+  if [[ -n "${DIRECT_SCHEDULE_CRON:-}" ]]; then
+    run_direct_cron_scheduler &
+    log_info "Started direct cron scheduler"
+  else
+    run_direct_interval_scheduler &
+    log_info "Started direct interval scheduler"
+  fi
+}
+
+run_direct_backup() {
+  local date_str name tmpfile srcs
+  date_str=$(date -u +"%Y-%m-%d_%H-%M-%S")
+  name=${DIRECT_NAME_TEMPLATE//\{date\}/$date_str}
+  tmpfile="/tmp/${name}.tar"
+  srcs=$(jq -r '.[]' <<<"${DIRECT_SOURCES_JSON:-[\"config\"]}" 2>/dev/null || echo config)
+  local paths=""
+  while read -r s; do
+    case "$s" in
+      config) paths+=" /config" ;;
+      media)  paths+=" /media" ;;
+      share)  paths+=" /share" ;;
+      ssl)    paths+=" /ssl" ;;
+    esac
+  done <<< "$srcs"
+  if [[ -z "$paths" ]]; then
+    log_err "No direct sources configured"
+    return 1
+  fi
+  tar -C / -cf "$tmpfile" $paths --exclude='config/.storage/cloud' --exclude='config/.storage/onboarding' --exclude='**/__pycache__' >/dev/null 2>&1 || {
+    log_err "Creating direct tar failed"
+    return 1
+  }
+  upload_to_s3 "$tmpfile"
+}
 
 run_cron_scheduler() {
   require_bin crond || true
@@ -668,6 +751,18 @@ elif [[ "${1:-}" == "--restore" ]]; then
     exit 1
   fi
   exit 0
+elif [[ "${1:-}" == "--upload-file" ]]; then
+  # Direkter Upload einer lokalen Datei nach S3
+  if [[ -z "${2:-}" ]]; then
+    log_err "--upload-file requires a path argument"
+    exit 1
+  fi
+  update_aws_runtime
+  upload_to_s3 "$2" || exit 1
+  exit 0
+elif [[ "${1:-}" == "--direct-oneshot" ]]; then
+  run_direct_backup || exit 1
+  exit 0
 elif [[ "${1:-}" == "--start-scheduler" ]]; then
   start_scheduler
   exit 0
@@ -730,6 +825,7 @@ url.rewrite-once = (
   "^/api/restore-local$" => "/cgi-bin/restore-local.sh",
   "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
   "^/api/upload$" => "/cgi-bin/upload.sh",
+  "^/api/direct-upload$" => "/cgi-bin/direct-upload.sh",
   "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
   "^/api/get-overrides$" => "/cgi-bin/get-overrides.sh",
   "^/api/log$" => "/cgi-bin/log.sh",
@@ -749,4 +845,5 @@ start_http_ui
 
 main_loop &
 start_scheduler
+start_direct_scheduler
 wait

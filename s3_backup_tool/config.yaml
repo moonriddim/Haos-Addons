@@ -13,6 +13,10 @@ arch:
   - i386
 map:
   - backup:rw
+  - config:ro
+  - media:ro
+  - share:ro
+  - ssl:ro
 backup: hot
 hassio_api: true
 hassio_role: manager
@@ -51,6 +55,12 @@ options:
   restore_slug: ""
   restore_from_s3_key: ""
   restore_password: ""
+  direct_enabled: false
+  direct_interval_hours: 24
+  direct_schedule_cron: ""
+  direct_name_template: "direct_{date}"
+  direct_sources:
+    - config
 
 # Schema validiert die Optionen
 schema:
@@ -86,3 +96,9 @@ schema:
   restore_slug: str?
   restore_from_s3_key: str?
   restore_password: password?
+  direct_enabled: bool?
+  direct_interval_hours: int?
+  direct_schedule_cron: str?
+  direct_name_template: str?
+  direct_sources:
+    - str
