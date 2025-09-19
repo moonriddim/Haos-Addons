@@ -274,10 +274,12 @@ update_aws_runtime() {
     AWS_ENDPOINT_ARG="--endpoint-url $S3_ENDPOINT_URL"
   fi
   # KRITISCHER FIX: Region nur setzen wenn nicht leer (für Storj-Kompatibilität)
-  if [[ -n "$S3_REGION_NAME" ]]; then
+  if [[ -n "$S3_REGION_NAME" && "$S3_REGION_NAME" != "null" ]]; then
     AWS_REGION_ARG="--region $S3_REGION_NAME"
+    log_info "Using region: '$S3_REGION_NAME'"
   else
     AWS_REGION_ARG=""
+    log_info "No region set (Storj-compatible) - AWS_REGION_ARG is empty"
   fi
   SSL_ARG=""
   if [[ "${VERIFY_SSL,,}" == "false" ]]; then
@@ -313,10 +315,12 @@ update_aws_runtime() {
     AWS_ENDPOINT_ARG="--endpoint-url $S3_ENDPOINT_URL"
   fi
   # KRITISCHER FIX: Region nur setzen wenn nicht leer (für Storj-Kompatibilität)
-  if [[ -n "$S3_REGION_NAME" ]]; then
+  if [[ -n "$S3_REGION_NAME" && "$S3_REGION_NAME" != "null" ]]; then
     AWS_REGION_ARG="--region $S3_REGION_NAME"
+    log_info "Using region: '$S3_REGION_NAME'"
   else
     AWS_REGION_ARG=""
+    log_info "No region set (Storj-compatible) - AWS_REGION_ARG is empty"
   fi
   SSL_ARG=""
   if [[ "${VERIFY_SSL,,}" == "false" ]]; then
@@ -450,7 +454,30 @@ upload_to_s3() {
   }
   
   log_info "Uploading to s3://$S3_BUCKET/$key"
-  if aws s3 cp "$path" "s3://$S3_BUCKET/$key" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG "${SSE_ARGS[@]}"; then
+  
+  # KRITISCHER FIX: Storj/S3-kompatible Upload-Parameter
+  # MissingContentLength Fix: Multipart-Upload deaktivieren für bessere Kompatibilität
+  local upload_args=(
+    "$AWS_ENDPOINT_ARG"
+    "$AWS_REGION_ARG" 
+    "$SSL_ARG"
+    "${SSE_ARGS[@]}"
+    "--storage-class" "STANDARD"
+    "--cli-read-timeout" "0"
+    "--cli-connect-timeout" "60"
+  )
+  
+  # Für große Dateien (>100MB): Multipart-Threshold erhöhen
+  local file_size_mb=$((size_bytes / 1024 / 1024))
+  if (( file_size_mb > 100 )); then
+    upload_args+=("--cli-binary-format" "raw-in-base64-out")
+    log_info "Large file detected (${file_size_mb}MB) - using optimized upload parameters"
+  fi
+  
+  # DEBUG: Zeige Upload-Parameter
+  log_info "Upload parameters: ${upload_args[*]}"
+  
+  if aws s3 cp "$path" "s3://$S3_BUCKET/$key" "${upload_args[@]}"; then
     end_time=$(date +%s)
     duration=$((end_time - start_time))
     

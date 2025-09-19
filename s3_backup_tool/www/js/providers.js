@@ -341,19 +341,78 @@ function initializeProviders() {
   }
   if (btnClearCreds) {
     btnClearCreds.onclick = async () => {
-      // Zugangsdaten leeren, um Providerwechsel zu ermöglichen
+      // KRITISCHER FIX: ALLE Einstellungen zurücksetzen, nicht nur Zugangsdaten
       try {
-        const body = { s3_bucket: '', access_key_id: '', secret_access_key: '' };
-        await call('api/set-overrides', { body: JSON.stringify(body) });
-        const b = document.getElementById('bucket-input');
-        const ak = document.getElementById('ak-input');
-        const sk = document.getElementById('sk-input');
-        if (b) b.value = '';
-        if (ak) ak.value = '';
-        if (sk) sk.value = '';
-        out('Zugangsdaten gelöscht');
+        const clearBody = {
+          // Zugangsdaten
+          s3_bucket: '',
+          access_key_id: '',
+          secret_access_key: '',
+          
+          // Provider-Einstellungen
+          s3_endpoint_url: '',
+          s3_region_name: '',
+          force_path_style: false,
+          s3_prefix: '',
+          s3_sse: '',
+          s3_sse_kms_key_id: '',
+          enable_versioning: false,
+          
+          // Backup-Einstellungen auf Defaults zurücksetzen
+          watch_ha_backups: true,
+          upload_existing: false,
+          delete_local_after_upload: false,
+          run_on_start: false,
+          backup_interval_hours: null,
+          backup_schedule_cron: null,
+          retention_keep_last_s3: null,
+          retention_days_s3: null
+        };
+        
+        await call('api/set-overrides', { body: JSON.stringify(clearBody) });
+        
+        // UI-Felder zurücksetzen
+        const fields = [
+          'bucket-input', 'ak-input', 'sk-input', 'endpoint-input', 
+          'region-input', 'prefix-input', 'sse-select', 'kms-input',
+          'interval-input', 'cron-input', 'keep-last-input', 'retention-days-input'
+        ];
+        
+        fields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            if (field.type === 'checkbox') {
+              field.checked = false;
+            } else {
+              field.value = '';
+            }
+          }
+        });
+        
+        // Checkboxes explizit zurücksetzen
+        const checkboxes = [
+          'path-style-input', 'versioning-input', 'watch-ha-input',
+          'upload-existing-input', 'delete-local-input', 'run-on-start-input'
+        ];
+        
+        checkboxes.forEach(checkboxId => {
+          const checkbox = document.getElementById(checkboxId);
+          if (checkbox) {
+            checkbox.checked = (checkboxId === 'watch-ha-input'); // Nur watch-ha-input bleibt true (default)
+          }
+        });
+        
+        // Region-Select zurücksetzen
+        const regionSelect = document.getElementById('region-select');
+        if (regionSelect) regionSelect.value = '';
+        
+        out('✓ Alle Einstellungen zurückgesetzt');
+        
+        // Summary neu laden
+        loadSummaryFromOverrides();
+        
       } catch (e) {
-        out('Fehler beim Löschen der Zugangsdaten: ' + e.message);
+        out('Fehler beim Zurücksetzen der Einstellungen: ' + e.message);
       }
     };
   }
