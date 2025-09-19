@@ -194,6 +194,7 @@ url.rewrite-once = (
     "^/api/debug-sqlite$" => "/cgi-bin/debug-sqlite.sh",
     "^/api/test-permissions$" => "/cgi-bin/test-permissions.sh",
     "^/api/debug-save-load$" => "/cgi-bin/debug-save-load.sh",
+    "^/api/debug-api-calls$" => "/cgi-bin/debug-api-calls.sh",
     "^/api/backup-info$" => "/cgi-bin/backup-info.sh",
     "^/api/service$" => "/cgi-bin/service.sh"
 )

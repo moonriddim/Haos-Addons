@@ -178,6 +178,31 @@ window.debugSaveLoad = async function() {
   }
 };
 
+window.debugApiCalls = async function() {
+  out('Teste echte API-Calls vs. Simulation...');
+  setLoading(true);
+  try {
+    const result = await fetch(resolvePath('api/debug-api-calls'));
+    if (result.ok) {
+      const data = await result.text();
+      out('=== API CALLS DEBUG ERGEBNIS ===');
+      const lines = data.split('\n');
+      lines.forEach(line => {
+        if (line.trim()) {
+          out(line);
+        }
+      });
+      out('=== ENDE API CALLS DEBUG ===');
+    } else {
+      out(`Fehler beim API-Calls-Debug: HTTP ${result.status}`);
+    }
+  } catch (error) {
+    out(`Fehler: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   initializeProviders();
@@ -251,8 +276,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  const btnDebugApiCalls = document.getElementById('btn-debug-api-calls'); 
+  out(`API Debug Button: ${btnDebugApiCalls ? 'gefunden' : 'NICHT GEFUNDEN'}`);
+  if (btnDebugApiCalls) {
+    btnDebugApiCalls.onclick = () => {
+      out('🔍 API Debug Button geklickt');
+      console.log('API Debug button clicked');
+      if (window.debugApiCalls) {
+        window.debugApiCalls();
+      } else {
+        out('Fehler: debugApiCalls-Funktion nicht gefunden');
+        console.error('debugApiCalls function not found on window object');
+      }
+    };
+  }
+
   // Zeige verfügbare Funktionen im window object
-  const debugFunctions = ['showSQLiteStatus', 'testSettingsPersistence', 'testPermissions', 'debugSaveLoad'].filter(fn => window[fn]);
+  const debugFunctions = ['showSQLiteStatus', 'testSettingsPersistence', 'testPermissions', 'debugSaveLoad', 'debugApiCalls'].filter(fn => window[fn]);
   out(`Verfügbare Debug-Funktionen: ${debugFunctions.join(', ')}`);
   if (debugFunctions.length === 0) {
     out('⚠️ Keine Debug-Funktionen gefunden - möglicherweise Script-Ladung-Problem');
