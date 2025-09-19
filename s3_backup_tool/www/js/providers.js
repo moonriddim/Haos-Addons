@@ -288,16 +288,34 @@ function initializeProviders() {
           out('Secret Key leer - bestehender Wert wird beibehalten');
         }
         
-        // Provider-Einstellungen
+        // KRITISCHER FIX: Alle Provider-Einstellungen IMMER speichern (auch wenn leer)
+        // damit Backend/Frontend 100% konsistent sind
         Object.assign(combined, {
-          s3_endpoint_url: endpoint,
+          // Basis-Provider-Einstellungen
+          s3_endpoint_url: endpoint || '',
           force_path_style: pathStyle,
-          s3_prefix: prefixInput ? prefixInput.value : ''
+          s3_prefix: prefixInput ? prefixInput.value : '',
+          
+          // Provider-abhängige Felder - IMMER speichern für Konsistenz
+          s3_region_name: region || '',           // Leer für Storj/Hetzner
+          s3_sse: sse || '',                      // Leer für Storj  
+          s3_sse_kms_key_id: kms || '',           // Leer für Storj/Hetzner
+          enable_versioning: enableVersioning     // false für Storj
         });
-        if (caps.region && region) combined.s3_region_name = region;
-        if (Array.isArray(caps.sse) && caps.sse.length > 0) combined.s3_sse = sse || '';
-        if (caps.kms) combined.s3_sse_kms_key_id = kms || '';
-        if (caps.versioning) combined.enable_versioning = enableVersioning;
+        
+        // Debug-Info über provider-spezifische Werte
+        if (!caps.region && region) {
+          out(`⚠️ Region '${region}' gesetzt aber Provider unterstützt keine Regionen`);
+        }
+        if (!caps.sse.length && sse) {
+          out(`⚠️ SSE '${sse}' gesetzt aber Provider unterstützt keine SSE`);
+        }
+        if (!caps.kms && kms) {
+          out(`⚠️ KMS Key gesetzt aber Provider unterstützt kein KMS`);
+        }
+        if (!caps.versioning && enableVersioning) {
+          out(`⚠️ Versioning aktiviert aber Provider unterstützt keine Versionierung`);
+        }
         // Backup-Einstellungen
         combined.watch_ha_backups = !!document.getElementById('watch-ha-input')?.checked;
         combined.upload_existing = !!document.getElementById('upload-existing-input')?.checked;

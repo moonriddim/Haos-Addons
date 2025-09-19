@@ -118,35 +118,51 @@ load_overrides() {
       raw=$(sqlite3 "$db" "SELECT value FROM kv WHERE key = '$key_name' LIMIT 1;" 2>/dev/null || true)
       if [[ -n "$raw" ]]; then
         # Debug logging für wichtige Werte
-        if [[ "$key_name" == "s3_bucket" || "$key_name" == "access_key_id" || "$key_name" == "s3_endpoint_url" ]]; then
+        if [[ "$key_name" == "s3_bucket" || "$key_name" == "access_key_id" || "$key_name" == "s3_endpoint_url" || "$key_name" == "s3_region_name" ]]; then
           log_info "Loading override for $key_name: $(echo "$raw" | cut -c1-20)..."
         fi
         dec=$(jq -r '.' <<<"$raw" 2>/dev/null || true)
         if [[ -n "$dec" && "$dec" != "null" ]]; then
           printf -v "$var_name" '%s' "$dec"
+          log_info "✓ Applied override: $key_name = '$(echo "$dec" | cut -c1-30)...'"
+        else
+          log_info "✗ Invalid JSON for $key_name: '$raw'"
+        fi
+      else
+        # Erweiterte Debug-Info: Key nicht gefunden
+        if [[ "$key_name" == "s3_bucket" || "$key_name" == "access_key_id" || "$key_name" == "s3_endpoint_url" || "$key_name" == "s3_region_name" ]]; then
+          log_info "No override found for $key_name - using default from config.yaml"
         fi
       fi
     }
 
+    # === KRITISCHER FIX: Nur Felder laden die auch im Frontend gespeichert werden ===
+    
+    # Basis-Zugangsdaten (immer gespeichert/geladen)
     _assign_if_present S3_ENDPOINT_URL s3_endpoint_url
-    _assign_if_present S3_REGION_NAME s3_region_name
-    _assign_if_present FORCE_PATH_STYLE force_path_style
     _assign_if_present S3_BUCKET s3_bucket
     _assign_if_present S3_PREFIX s3_prefix
     _assign_if_present ACCESS_KEY_ID access_key_id
     _assign_if_present SECRET_ACCESS_KEY secret_access_key
-    _assign_if_present VERIFY_SSL verify_ssl
-    _assign_if_present AUTO_CREATE_BUCKET auto_create_bucket
-    _assign_if_present S3_SSE s3_sse
-    _assign_if_present S3_SSE_KMS_KEY_ID s3_sse_kms_key_id
-    _assign_if_present ENABLE_VERSIONING enable_versioning
+    _assign_if_present FORCE_PATH_STYLE force_path_style
+    
+    # Provider-abhängige Felder (nur laden wenn vom Frontend gespeichert)
+    _assign_if_present S3_REGION_NAME s3_region_name          # Nur wenn caps.region
+    _assign_if_present S3_SSE s3_sse                          # Nur wenn caps.sse.length > 0  
+    _assign_if_present S3_SSE_KMS_KEY_ID s3_sse_kms_key_id    # Nur wenn caps.kms
+    _assign_if_present ENABLE_VERSIONING enable_versioning    # Nur wenn caps.versioning
+    
+    # Backup-Einstellungen (immer gespeichert/geladen)
     _assign_if_present WATCH_HA_BACKUPS watch_ha_backups
     _assign_if_present UPLOAD_EXISTING upload_existing
+    _assign_if_present DELETE_LOCAL_AFTER_UPLOAD delete_local_after_upload  # KRITISCHER FIX: War VERGESSEN!
+    _assign_if_present RUN_ON_START run_on_start
     _assign_if_present BACKUP_INTERVAL_HOURS backup_interval_hours
     _assign_if_present BACKUP_SCHEDULE_CRON backup_schedule_cron
-    _assign_if_present RUN_ON_START run_on_start
     _assign_if_present RETENTION_KEEP_LAST_S3 retention_keep_last_s3
     _assign_if_present RETENTION_DAYS_S3 retention_days_s3
+    
+    # REMOVED: verify_ssl, auto_create_bucket (werden nicht vom Frontend gespeichert)
 
     log_info "Applied overrides from SQLite (/data/overrides.db)"
   fi
@@ -213,6 +229,7 @@ url.rewrite-once = (
     "^/api/get-recent-logs$" => "/cgi-bin/get-recent-logs.sh",
     "^/api/get-backup-history$" => "/cgi-bin/get-backup-history.sh",
     "^/api/add-backup-history$" => "/cgi-bin/add-backup-history.sh",
+    "^/api/debug-bucket-name$" => "/cgi-bin/debug-bucket-name.sh",
     "^/api/backup-info$" => "/cgi-bin/backup-info.sh",
     "^/api/service$" => "/cgi-bin/service.sh"
 )
@@ -256,7 +273,12 @@ update_aws_runtime() {
   if [[ -n "$S3_ENDPOINT_URL" ]]; then
     AWS_ENDPOINT_ARG="--endpoint-url $S3_ENDPOINT_URL"
   fi
-  AWS_REGION_ARG="--region $S3_REGION_NAME"
+  # KRITISCHER FIX: Region nur setzen wenn nicht leer (für Storj-Kompatibilität)
+  if [[ -n "$S3_REGION_NAME" ]]; then
+    AWS_REGION_ARG="--region $S3_REGION_NAME"
+  else
+    AWS_REGION_ARG=""
+  fi
   SSL_ARG=""
   if [[ "${VERIFY_SSL,,}" == "false" ]]; then
     SSL_ARG="--no-verify-ssl"
@@ -290,7 +312,12 @@ update_aws_runtime() {
   if [[ -n "$S3_ENDPOINT_URL" ]]; then
     AWS_ENDPOINT_ARG="--endpoint-url $S3_ENDPOINT_URL"
   fi
-  AWS_REGION_ARG="--region $S3_REGION_NAME"
+  # KRITISCHER FIX: Region nur setzen wenn nicht leer (für Storj-Kompatibilität)
+  if [[ -n "$S3_REGION_NAME" ]]; then
+    AWS_REGION_ARG="--region $S3_REGION_NAME"
+  else
+    AWS_REGION_ARG=""
+  fi
   SSL_ARG=""
   if [[ "${VERIFY_SSL,,}" == "false" ]]; then
     SSL_ARG="--no-verify-ssl"
