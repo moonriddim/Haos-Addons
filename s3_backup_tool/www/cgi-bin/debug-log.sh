@@ -2,13 +2,15 @@
 echo "Content-Type: text/plain"
 echo
 
+set +e
+
 echo "=== Debug Log für Backup API ==="
 echo
 
 if [ -f /tmp/backup_debug.log ]; then
   echo "Letzte 50 Log-Einträge:"
   echo "========================"
-  tail -n 50 /tmp/backup_debug.log
+  tail -n 50 /tmp/backup_debug.log || true
 else
   echo "Keine Debug-Logs gefunden."
 fi
@@ -16,9 +18,9 @@ fi
 echo
 echo "=== SUPERVISOR_TOKEN Status ==="
 if [ -f /tmp/supervisor_token ]; then
-  token_length=$(wc -c < /tmp/supervisor_token)
+  token_length=$(wc -c < /tmp/supervisor_token 2>/dev/null || echo 0)
   echo "Token-Datei gefunden, Länge: $token_length Zeichen"
-  echo "Token-Anfang: $(head -c 20 /tmp/supervisor_token)..."
+  echo "Token-Anfang: $(head -c 20 /tmp/supervisor_token 2>/dev/null || echo '')..."
 else
   echo "Token-Datei nicht gefunden!"
 fi
@@ -26,7 +28,7 @@ fi
 echo
 echo "=== Netzwerk-Test ==="
 echo "Ping supervisor:"
-ping -c 1 supervisor 2>&1 | head -n 3
+ping -c 1 supervisor 2>&1 | head -n 3 || echo "Ping fehlgeschlagen"
 
 echo
 echo "=== Dateisystem-Status ==="

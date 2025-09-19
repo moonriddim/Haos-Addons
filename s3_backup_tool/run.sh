@@ -139,6 +139,8 @@ echo "$SUPERVISOR_TOKEN" > /tmp/supervisor_token
 chmod 600 /tmp/supervisor_token
 
 # Sicherstellen dass CGI-Scripts ausführbar sind
+# Normalize line endings and ensure executables
+find /www -type f -name "*.sh" -exec dos2unix -q {} +
 find /www -name "*.sh" -exec chmod +x {} +
 
 # HTTP-UI früh starten, damit Ingress/Frontend erreichbar ist
@@ -791,6 +793,7 @@ start_http_ui() {
   chmod 600 /tmp/supervisor_token
   
   # Sicherstellen dass CGI-Scripts ausführbar sind
+  find /www -type f -name "*.sh" -exec dos2unix -q {} +
   find /www -name "*.sh" -exec chmod +x {} +
   
   port="$(bashio::addon.ingress_port 2>/dev/null || true)"
