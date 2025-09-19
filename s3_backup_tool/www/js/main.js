@@ -74,6 +74,7 @@ function initializeTabs() {
 document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   initializeProviders();
+  if (typeof initializeBackupCreationForm === 'function') initializeBackupCreationForm();
   // Header-Buttons existieren nicht mehr
   const rl = document.getElementById('btn-refresh-local');
   if (rl) rl.onclick = refresh;

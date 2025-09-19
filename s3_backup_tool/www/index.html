@@ -129,6 +129,68 @@
                   <p>Es wurden keine lokalen Backups erkannt.</p>
                 </div>
               </div>
+
+              <div class="card" style="margin-top:16px">
+                <div class="card-header">
+                  <h3 class="card-title">Neues Backup erstellen</h3>
+                  <p class="card-description">Erstelle ein vollständiges oder teilweises Backup wie in Home Assistant</p>
+                </div>
+                <div class="card-content">
+                  <div class="form-grid">
+                    <div class="form-group checkbox-group">
+                      <label class="checkbox-label">
+                        <input type="checkbox" id="nb-full" class="form-checkbox" checked />
+                        <span class="checkbox-indicator"></span>
+                        Vollständiges Backup
+                      </label>
+                    </div>
+                    <div class="form-group">
+                      <label for="nb-name" class="form-label">Name</label>
+                      <input id="nb-name" type="text" class="form-input" placeholder="Addon Backup {date}" />
+                    </div>
+                    <div class="form-group">
+                      <label for="nb-password" class="form-label">Passwort (optional)</label>
+                      <input id="nb-password" type="password" class="form-input" placeholder="Passwort" />
+                    </div>
+                    <div class="form-group checkbox-group">
+                      <label class="checkbox-label">
+                        <input type="checkbox" id="nb-include-ha" class="form-checkbox" />
+                        <span class="checkbox-indicator"></span>
+                        Home Assistant einschließen (bei teilweise)
+                      </label>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Ordner (teilweise)</label>
+                      <div id="nb-folders" style="display:flex;gap:12px;flex-wrap:wrap">
+                        <label class="checkbox-label"><input type="checkbox" data-folder="homeassistant" class="form-checkbox" /><span class="checkbox-indicator"></span> homeassistant</label>
+                        <label class="checkbox-label"><input type="checkbox" data-folder="share" class="form-checkbox" /><span class="checkbox-indicator"></span> share</label>
+                        <label class="checkbox-label"><input type="checkbox" data-folder="ssl" class="form-checkbox" /><span class="checkbox-indicator"></span> ssl</label>
+                        <label class="checkbox-label"><input type="checkbox" data-folder="media" class="form-checkbox" /><span class="checkbox-indicator"></span> media</label>
+                        <label class="checkbox-label"><input type="checkbox" data-folder="addons/local" class="form-checkbox" /><span class="checkbox-indicator"></span> addons/local</label>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Add-ons (teilweise)</label>
+                      <div id="nb-addons" class="restore-addons">
+                        <div class="text-muted">Add-ons werden geladen…</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-actions">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                      <label class="checkbox-label"><input type="checkbox" id="nb-upload-after" class="form-checkbox" /><span class="checkbox-indicator"></span> Danach sofort zu S3 hochladen</label>
+                      <div class="input-group">
+                        <select id="nb-profile" class="form-select">
+                          <option value="">Profil wählen (optional)</option>
+                          <option value='{"full":true,"name":"Full {date}"}'>Vollständig (Standard)</option>
+                          <option value='{"full":false,"homeassistant":true,"folders":["share","ssl"],"addons":[] ,"name":"Partial {date}"}'>Teilweise: HA + share/ssl</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button id="btn-nb-create" class="btn btn-primary">Backup erstellen</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
