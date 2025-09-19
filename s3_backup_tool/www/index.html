@@ -21,13 +21,7 @@
       </div>
       
       <div class="nav-menu">
-        <button class="nav-item" data-tab="backups">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-          </svg>
-          Backups
-        </button>
-        <button class="nav-item active" data-tab="restore">
+        <button class="nav-item" data-tab="restore">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
           </svg>
@@ -68,43 +62,6 @@
 
       <!-- Tab Content -->
       <div class="tab-content">
-        <!-- Backups Tab -->
-        <div class="tab-panel" id="backups-panel">
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">Lokale Backups</h3>
-              <p class="card-description">Verwalte lokale Backups und starte neue Sicherungen</p>
-            </div>
-            <div class="card-content">
-              <div class="form-actions" style="justify-content:space-between">
-                <div></div>
-                <div>
-                  <button id="btn-refresh-local" class="btn btn-secondary">Aktualisieren</button>
-                  <button id="btn-backup-local" class="btn btn-primary">Backup starten</button>
-                </div>
-              </div>
-              <div class="table-container" style="margin-top:12px">
-                <table id="backup-table" class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Slug</th>
-                      <th>Datum</th>
-                      <th>Größe</th>
-                      <th>Typ</th>
-                      <th class="text-right">Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-                <div id="empty-state" class="empty-state" style="display:none">
-                  <h4>Keine lokalen Backups gefunden</h4>
-                  <p>Es wurden keine lokalen Backups erkannt.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
         <!-- Providers Tab -->
         <div class="tab-panel" id="providers-panel">
           <div class="card">
