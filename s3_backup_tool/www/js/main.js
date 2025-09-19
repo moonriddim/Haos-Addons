@@ -78,33 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const rl = document.getElementById('btn-refresh-local');
   if (rl) rl.onclick = refresh;
   const bl = document.getElementById('btn-backup-local');
-  // ehemaliger Backup-Button entfällt in favor von Direkt-Upload
-  const du = document.getElementById('btn-direct-upload');
-  if (du) du.onclick = async () => {
-    setLoading(true);
-    const srcs = [];
-    if (document.getElementById('du-src-config')?.checked) srcs.push('config');
-    if (document.getElementById('du-src-media')?.checked) srcs.push('media');
-    if (document.getElementById('du-src-share')?.checked) srcs.push('share');
-    if (document.getElementById('du-src-ssl')?.checked) srcs.push('ssl');
-    const name = document.getElementById('du-name')?.value.trim();
-    if (srcs.length === 0) { out('Bitte mindestens eine Quelle auswählen.'); setLoading(false); return; }
-    out('Direkter Upload: Erstelle Tar aus ' + srcs.map(s => '/' + s).join(', ') + ' ...');
-    try {
-      const res = await call('api/direct-upload', { body: JSON.stringify({ sources: srcs, name: name || null }) });
-      if (res.ok) {
-        try { const j = JSON.parse(res.body || '{}'); if (j.s3_key) out(`Uploaded: s3://${j.s3_key}`); } catch (_) {}
-        out('Direkter Upload erfolgreich');
-        try { const s3Result = await call('api/list-s3'); if (s3Result.ok) renderS3List(JSON.parse(s3Result.body)); } catch (_) {}
-      } else {
-        out('Direkter Upload fehlgeschlagen');
-      }
-    } catch (e) {
-      out('Fehler beim direkten Upload: ' + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (bl) bl.onclick = runBackup;
   document.getElementById('btn-apply-preset').onclick = applyProviderSettings;
   // Zugangsdaten werden jetzt über "Speichern und schließen" übernommen
   document.getElementById('btn-restore-local').onclick = restoreLocal;
