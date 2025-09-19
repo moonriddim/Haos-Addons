@@ -10,7 +10,15 @@ function resolvePath(path) {
 }
 
 async function call(path, opts = {}) {
-  const res = await fetch(resolvePath(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...opts });
+  // Für GET-Endpunkte (ohne Body) GET verwenden, sonst POST
+  const hasBody = opts && Object.prototype.hasOwnProperty.call(opts, 'body') && opts.body != null;
+  const method = hasBody ? 'POST' : 'GET';
+  const init = { method, headers: { 'Content-Type': 'application/json' }, ...opts };
+  if (!hasBody) {
+    // Body-Header entfernen, wenn kein Body gesendet wird
+    if (init.headers && init.headers['Content-Type']) delete init.headers['Content-Type'];
+  }
+  const res = await fetch(resolvePath(path), init);
   const txt = await res.text();
   if (!res.ok) {
     console.error(`HTTP ${res.status}: ${res.statusText} für ${path}`);

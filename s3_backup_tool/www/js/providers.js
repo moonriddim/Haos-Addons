@@ -1,6 +1,6 @@
 function initializeProviders() {
   const providerCards = document.querySelectorAll('.provider-card');
-  const capsByProvider = {
+  const capsByProvider = window.capsByProvider = {
     aws:     { sse: ['AES256','KMS'], kms: true,  versioning: true,  pathStyle: false, region: true,  endpoint: true },
     gcp:     { sse: ['AES256','KMS'], kms: true,  versioning: true,  pathStyle: false, region: true,  endpoint: true },
     hetzner: { sse: ['AES256'],       kms: false, versioning: true,  pathStyle: false, region: false, endpoint: true },
@@ -8,7 +8,7 @@ function initializeProviders() {
   };
 
   // Regionen pro Provider (kuratiert)
-  const regionsByProvider = {
+  const regionsByProvider = window.regionsByProvider = {
     aws: [
       'us-east-1','us-east-2','us-west-1','us-west-2',
       'ca-central-1','sa-east-1','eu-west-1','eu-west-2','eu-west-3','eu-north-1','eu-south-1','eu-south-2','eu-central-1','eu-central-2',
@@ -191,20 +191,26 @@ function initializeProviders() {
     btnSaveClose.onclick = async () => {
       // Speichere beide Bereiche in einem Schritt
       await applyProviderSettings();
-      // Zugangsdaten (Bucket/Keys) zusammen mit Provider-Einstellungen übernehmen
+      // Zugangsdaten und Backup-Einstellungen in EINEM Request speichern (robuster gegen Abbruch)
       try {
-        const body = {
+        const combined = {
           s3_bucket: document.getElementById('bucket-input')?.value || '',
           access_key_id: document.getElementById('ak-input')?.value || '',
-          secret_access_key: document.getElementById('sk-input')?.value || ''
+          secret_access_key: document.getElementById('sk-input')?.value || '',
+          watch_ha_backups: !!document.getElementById('watch-ha-input')?.checked,
+          upload_existing: !!document.getElementById('upload-existing-input')?.checked,
+          delete_local_after_upload: !!document.getElementById('delete-local-input')?.checked,
+          run_on_start: !!document.getElementById('run-on-start-input')?.checked,
+          backup_interval_hours: document.getElementById('interval-input')?.value || null,
+          backup_schedule_cron: document.getElementById('cron-input')?.value || null,
+          retention_keep_last_s3: document.getElementById('keep-last-input')?.value || null,
+          retention_days_s3: document.getElementById('retention-days-input')?.value || null
         };
-        await call('api/set-overrides', { body: JSON.stringify(body) });
-        out('Zugangsdaten gespeichert');
+        await call('api/set-overrides', { body: JSON.stringify(combined) });
+        out('Einstellungen gespeichert');
       } catch (e) {
-        out('Fehler beim Speichern der Zugangsdaten: ' + e.message);
+        out('Fehler beim Speichern der Einstellungen: ' + e.message);
       }
-      const btnApplyBackup = document.getElementById('btn-apply-backup');
-      if (btnApplyBackup) btnApplyBackup.click();
       editWrapper.style.display = 'none';
       summaryCard.style.display = '';
       loadSummaryFromOverrides();
