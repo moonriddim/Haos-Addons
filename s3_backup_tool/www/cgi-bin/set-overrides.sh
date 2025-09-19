@@ -24,10 +24,17 @@ echo "DEBUG: Data dir permissions: $(ls -la /data 2>/dev/null || echo 'not acces
 
 base='{}'
 
-# Eingehenden JSON-Body validieren
-incoming="${body:-{}}"
+# Eingehenden JSON-Body validieren  
+# KRITISCHER FIX: Verwende body direkt, nicht mit default {} - das fügt extra } hinzu!
+if [ -n "$body" ]; then
+  incoming="$body"
+else
+  incoming="{}"
+fi
+
 echo "DEBUG: Raw body: '$body'" >&2
 echo "DEBUG: Incoming: '$incoming'" >&2
+echo "DEBUG: Body length: ${#body}, Incoming length: ${#incoming}" >&2
 
 # Bei ungültigem JSON: wie leeres Objekt behandeln (robuster gegen Transport-Besonderheiten)
 if printf '%s' "$incoming" | jq -e '.' >/dev/null 2>&1; then
