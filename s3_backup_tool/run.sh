@@ -442,6 +442,18 @@ upload_to_s3() {
   local filename key start_time end_time duration size_bytes
   filename=$(basename "$path")
   key="${S3_PREFIX}${filename}"
+  
+  # KRITISCHER FIX: Mehrfache Uploads verhindern mit Lock-File
+  local lock_file="/tmp/upload_lock_$(echo "$filename" | tr '/' '_')"
+  if [[ -f "$lock_file" ]]; then
+    log_info "Upload bereits in Arbeit für: $filename (Lock existiert)"
+    return 0
+  fi
+  
+  # Lock erstellen
+  touch "$lock_file"
+  trap "rm -f \"$lock_file\"" RETURN
+  
   start_time=$(date +%s)
   
   # Dateigröße ermitteln
@@ -455,29 +467,51 @@ upload_to_s3() {
   
   log_info "Uploading to s3://$S3_BUCKET/$key"
   
-  # KRITISCHER FIX: Storj/S3-kompatible Upload-Parameter
-  # MissingContentLength Fix: Multipart-Upload deaktivieren für bessere Kompatibilität
-  local upload_args=(
-    "$AWS_ENDPOINT_ARG"
-    "$AWS_REGION_ARG" 
-    "$SSL_ARG"
-    "${SSE_ARGS[@]}"
-    "--storage-class" "STANDARD"
-    "--cli-read-timeout" "0"
-    "--cli-connect-timeout" "60"
-  )
+  # KRITISCHER FIX: Upload-Parameter korrekt aufbauen 
+  local upload_cmd="aws s3 cp \"$path\" \"s3://$S3_BUCKET/$key\""
   
-  # Für große Dateien (>100MB): Multipart-Threshold erhöhen
-  local file_size_mb=$((size_bytes / 1024 / 1024))
-  if (( file_size_mb > 100 )); then
-    upload_args+=("--cli-binary-format" "raw-in-base64-out")
-    log_info "Large file detected (${file_size_mb}MB) - using optimized upload parameters"
+  # Endpoint-URL hinzufügen (falls gesetzt)
+  if [[ -n "$S3_ENDPOINT_URL" ]]; then
+    upload_cmd="$upload_cmd --endpoint-url $S3_ENDPOINT_URL"
   fi
   
-  # DEBUG: Zeige Upload-Parameter
-  log_info "Upload parameters: ${upload_args[*]}"
+  # Region hinzufügen (nur wenn nicht leer)
+  if [[ -n "$S3_REGION_NAME" && "$S3_REGION_NAME" != "null" ]]; then
+    upload_cmd="$upload_cmd --region $S3_REGION_NAME"
+    log_info "Using region in upload: '$S3_REGION_NAME'"
+  else
+    log_info "No region in upload command (Storj-compatible)"
+  fi
   
-  if aws s3 cp "$path" "s3://$S3_BUCKET/$key" "${upload_args[@]}"; then
+  # SSL-Verifikation (falls deaktiviert)
+  if [[ "${VERIFY_SSL,,}" == "false" ]]; then
+    upload_cmd="$upload_cmd --no-verify-ssl"
+  fi
+  
+  # Storage-Class für bessere Kompatibilität
+  upload_cmd="$upload_cmd --storage-class STANDARD"
+  upload_cmd="$upload_cmd --cli-read-timeout 0"
+  upload_cmd="$upload_cmd --cli-connect-timeout 60"
+  
+  # SSE-Parameter hinzufügen (falls gesetzt)
+  if [[ -n "$S3_SSE" && "$S3_SSE" != "null" ]]; then
+    upload_cmd="$upload_cmd --sse $S3_SSE"
+    if [[ "$S3_SSE" == "aws:kms" && -n "$S3_SSE_KMS_KEY_ID" ]]; then
+      upload_cmd="$upload_cmd --sse-kms-key-id $S3_SSE_KMS_KEY_ID"
+    fi
+  fi
+  
+  # Für große Dateien (>100MB): zusätzliche Parameter
+  local file_size_mb=$((size_bytes / 1024 / 1024))
+  if (( file_size_mb > 100 )); then
+    upload_cmd="$upload_cmd --cli-binary-format raw-in-base64-out"
+    log_info "Large file detected (${file_size_mb}MB) - using optimized parameters"
+  fi
+  
+  # DEBUG: Zeige finalen Upload-Befehl
+  log_info "Final upload command: $upload_cmd"
+  
+  if eval "$upload_cmd"; then
     end_time=$(date +%s)
     duration=$((end_time - start_time))
     

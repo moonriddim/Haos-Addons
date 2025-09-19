@@ -430,31 +430,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  const btnStartLiveLogs = document.getElementById('btn-start-live-logs');
-  const btnStopLiveLogs = document.getElementById('btn-stop-live-logs');
-  
-  out(`Live-Logs Buttons: Start ${btnStartLiveLogs ? '✓' : '✗'}, Stop ${btnStopLiveLogs ? '✓' : '✗'}`);
-  
-  if (btnStartLiveLogs) {
-    btnStartLiveLogs.onclick = () => {
-      out('🔴 Live-Logs Button geklickt');
-      if (window.startLiveLogging) {
-        window.startLiveLogging();
-        btnStartLiveLogs.style.display = 'none';
-        btnStopLiveLogs.style.display = 'inline-block';
+  const btnDebugBucketName = document.getElementById('btn-debug-bucket-name');
+  if (btnDebugBucketName) {
+    btnDebugBucketName.onclick = () => {
+      out('🪣 Bucket Debug Button geklickt');
+      if (window.debugBucketName) {
+        window.debugBucketName();
+      } else {
+        out('Fehler: debugBucketName-Funktion nicht gefunden');
+        console.error('debugBucketName function not found on window object');
       }
     };
   }
-  
-  if (btnStopLiveLogs) {
-    btnStopLiveLogs.onclick = () => {
-      out('⏹️ Stop-Logs Button geklickt');
-      if (window.stopLiveLogging) {
-        window.stopLiveLogging();
-        btnStopLiveLogs.style.display = 'none';
-        btnStartLiveLogs.style.display = 'inline-block';
-      }
-    };
+
+  // KRITISCHE ÄNDERUNG: Live-Logging automatisch immer starten
+  out('🔴 Live-Logging automatisch gestartet (läuft dauerhaft)...');
+  if (window.startLiveLogging) {
+    window.startLiveLogging();
+  } else {
+    out('❌ startLiveLogging Funktion nicht gefunden');
   }
   
   // Backup-History Button
