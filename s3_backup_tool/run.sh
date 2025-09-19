@@ -154,6 +154,8 @@ server.document-root = "/www"
 server.port = __PORT__
 server.errorlog = "/tmp/lighttpd_error.log"
 server.breakagelog = "/tmp/lighttpd_access.log"
+server.username = "root"
+server.groupname = "root"
 
 mimetype.assign = (
   ".html" => "text/html",
@@ -801,6 +803,8 @@ server.document-root = "/www"
 server.port = __PORT__
 server.errorlog = "/tmp/lighttpd_error.log"
 server.breakagelog = "/tmp/lighttpd_access.log"
+server.username = "root"
+server.groupname = "root"
 
 mimetype.assign = (
   ".html" => "text/html",
