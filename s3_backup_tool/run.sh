@@ -71,16 +71,43 @@ refresh_runtime_config() {
 
 load_overrides() {
   local db="/data/overrides.db"
+  
+  # Debug: Zeige Status der SQLite-Datenbank
+  if [[ -f "$db" ]]; then
+    log_info "SQLite DB found: $db (size: $(stat -c%s "$db" 2>/dev/null || echo "unknown") bytes)"
+  else
+    log_info "SQLite DB not found: $db"
+  fi
+  
+  if ! command -v sqlite3 >/dev/null 2>&1; then
+    log_warn "sqlite3 command not available"
+    return 1
+  fi
+  
   if [[ -f "$db" ]] && command -v sqlite3 >/dev/null 2>&1; then
-    # Helfer: Wert aus DB lesen und JSON-dekodiert in Variable schreiben (nur wenn gesetzt)
+    # Test DB-Verbindung
+    local test_query
+    test_query=$(sqlite3 "$db" "SELECT COUNT(*) FROM kv;" 2>/dev/null || echo "ERROR")
+    if [[ "$test_query" == "ERROR" ]]; then
+      log_warn "Cannot read from SQLite DB: $db"
+      return 1
+    fi
+    
+    log_info "SQLite DB accessible with $test_query override entries"
+    
+    # Helfer: Wert aus DB lesen und JSON-dekodiert in Variable schreiben (nur wenn gesetzt)  
     _assign_if_present() {
       local var_name="$1"
       local key_name="$2"
       local raw dec
       raw=$(sqlite3 "$db" "SELECT value FROM kv WHERE key = '$key_name' LIMIT 1;" 2>/dev/null || true)
       if [[ -n "$raw" ]]; then
+        # Debug logging für wichtige Werte
+        if [[ "$key_name" == "s3_bucket" || "$key_name" == "access_key_id" || "$key_name" == "s3_endpoint_url" ]]; then
+          log_info "Loading override for $key_name: $(echo "$raw" | cut -c1-20)..."
+        fi
         dec=$(jq -r '.' <<<"$raw" 2>/dev/null || true)
-        if [[ -n "$dec" ]]; then
+        if [[ -n "$dec" && "$dec" != "null" ]]; then
           printf -v "$var_name" '%s' "$dec"
         fi
       fi
@@ -164,6 +191,7 @@ url.rewrite-once = (
   "^/api/set-overrides$" => "/cgi-bin/set-overrides.sh",
   "^/api/get-overrides$" => "/cgi-bin/get-overrides.sh",
     "^/api/debug-log$" => "/cgi-bin/debug-log.sh",
+    "^/api/debug-sqlite$" => "/cgi-bin/debug-sqlite.sh",
     "^/api/backup-info$" => "/cgi-bin/backup-info.sh",
     "^/api/service$" => "/cgi-bin/service.sh"
 )

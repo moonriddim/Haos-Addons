@@ -10,8 +10,14 @@ else
   body="$(cat)"
 fi
 
+# Sicherstellen dass das data-Verzeichnis existiert und die richtigen Permissions hat
 mkdir -p /data
+chmod 755 /data
 db="/data/overrides.db"
+
+# Debug-Logging für Empfang
+echo "DEBUG: Received body length: ${#body}" >&2
+echo "DEBUG: Data dir permissions: $(ls -la /data 2>/dev/null || echo 'not accessible')" >&2
 
 base='{}'
 
@@ -19,16 +25,24 @@ base='{}'
 incoming="${body:-{}}"
 # Bei ungültigem JSON: wie leeres Objekt behandeln (robuster gegen Transport-Besonderheiten)
 if ! printf '%s' "$incoming" | jq -e '.' >/dev/null 2>&1; then
+  echo "DEBUG: Invalid JSON received, using empty object" >&2
   incoming='{}'
 fi
 
-# Nur Felder updaten, die im Request vorhanden sind:
-# - Strings: nur wenn nicht leer
-# - Booleans/Numbers: auch false/0 werden übernommen
+# Debug: Zeige empfangene Keys
+echo "DEBUG: Received keys: $(printf '%s' "$incoming" | jq -r 'keys[]' 2>/dev/null)" >&2
+
 # Nur DB: direkt in SQLite upserten
 if command -v sqlite3 >/dev/null 2>&1; then
-  sqlite3 "$db" "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);" 2>/dev/null || true
+  # Erstelle Tabelle und setze Permissions
+  sqlite3 "$db" "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);" 2>/dev/null || {
+    echo "DEBUG: Failed to create table" >&2
+    echo '{"error":"failed_to_create_table"}'
+    exit 1
+  }
+  chmod 666 "$db" 2>/dev/null || true
   keys=$(printf '%s' "$incoming" | jq -r 'keys[]' 2>/dev/null)
+  saved_count=0
   for k in $keys; do
     v=$(printf '%s' "$incoming" | jq -c --arg k "$k" '.[$k]' 2>/dev/null)
     # Nur nicht-leere Werte schreiben (wie oben)
@@ -36,10 +50,21 @@ if command -v sqlite3 >/dev/null 2>&1; then
       # Einfache SQL-Quoting-Regel: single quotes verdoppeln
       k_esc=$(printf '%s' "$k" | sed "s/'/''/g")
       v_esc=$(printf '%s' "$v" | sed "s/'/''/g")
-      sqlite3 "$db" "INSERT INTO kv(key,value) VALUES('$k_esc','$v_esc') ON CONFLICT(key) DO UPDATE SET value=excluded.value;" 2>/dev/null || true
+      if sqlite3 "$db" "INSERT INTO kv(key,value) VALUES('$k_esc','$v_esc') ON CONFLICT(key) DO UPDATE SET value=excluded.value;" 2>/dev/null; then
+        saved_count=$((saved_count + 1))
+        echo "DEBUG: Saved $k successfully" >&2
+      else
+        echo "DEBUG: Failed to save $k" >&2
+      fi
+    else
+      echo "DEBUG: Skipped empty/null value for $k" >&2
     fi
   done
-  echo '{"status":"ok"}'
+  
+  # Finale Verifikation
+  total_entries=$(sqlite3 "$db" "SELECT COUNT(*) FROM kv;" 2>/dev/null || echo "0")
+  echo "DEBUG: Database now contains $total_entries entries" >&2
+  echo '{"status":"ok","saved":'"$saved_count"',"total":'"$total_entries"'}'
 else
   echo '{"error":"sqlite_unavailable"}'
 fi

@@ -61,6 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-restore-local').onclick = restoreLocal;
   document.getElementById('btn-restore-s3').onclick = restoreFromS3;
   document.getElementById('btn-debug-log').onclick = showDebugLogs;
+  
+  // SQLite Debug buttons
+  const btnSQLiteStatus = document.getElementById('btn-sqlite-status');
+  if (btnSQLiteStatus) btnSQLiteStatus.onclick = showSQLiteStatus;
+  
+  const btnTestPersistence = document.getElementById('btn-test-persistence'); 
+  if (btnTestPersistence) btnTestPersistence.onclick = testSettingsPersistence;
   out('S3 Backup Tool gestartet');
   setTimeout(refresh, 1000);
   document.addEventListener('keydown', (e) => {
