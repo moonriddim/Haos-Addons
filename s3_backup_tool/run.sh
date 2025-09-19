@@ -415,24 +415,112 @@ upload_to_s3() {
 }
 
 ensure_bucket_exists() {
-  if aws s3 ls "s3://$S3_BUCKET" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1; then
+  log_info "=== S3 BUCKET DEBUG ==="
+  log_info "Bucket: '$S3_BUCKET'"
+  log_info "Endpoint: '$S3_ENDPOINT_URL'"
+  log_info "Region: '$S3_REGION_NAME'"
+  log_info "AWS_ENDPOINT_ARG: '$AWS_ENDPOINT_ARG'"
+  log_info "AWS_REGION_ARG: '$AWS_REGION_ARG'"
+  log_info "SSL_ARG: '$SSL_ARG'"
+  log_info "AUTO_CREATE_BUCKET: '$AUTO_CREATE_BUCKET'"
+  log_info "ACCESS_KEY_ID: '${ACCESS_KEY_ID:0:8}***'" # Nur ersten 8 Zeichen zeigen
+  log_info "SECRET_KEY length: ${#SECRET_ACCESS_KEY} chars"
+  
+  # Bucket-Name Validierung
+  if [[ -z "$S3_BUCKET" ]]; then
+    log_err "S3_BUCKET ist leer!"
+    return 1
+  fi
+  
+  # Überprüfe Bucket-Name auf problematische Zeichen
+  if [[ "$S3_BUCKET" =~ [[:space:]] ]]; then
+    log_warn "WARNUNG: Bucket-Name enthält Leerzeichen: '$S3_BUCKET'"
+    log_warn "S3 Bucket-Namen sollten keine Leerzeichen enthalten!"
+  fi
+  
+  if [[ "$S3_BUCKET" =~ [A-Z] ]]; then
+    log_warn "WARNUNG: Bucket-Name enthält Großbuchstaben: '$S3_BUCKET'"
+    log_warn "S3 Bucket-Namen sollten nur Kleinbuchstaben enthalten!"
+  fi
+  
+  # Test 1: Bucket existiert bereits?
+  log_info "Teste ob Bucket bereits existiert..."
+  bucket_check_output=$(aws s3 ls "s3://$S3_BUCKET" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG 2>&1)
+  bucket_check_exit_code=$?
+  
+  log_info "Bucket-Check Exit Code: $bucket_check_exit_code"
+  if [[ $bucket_check_exit_code -eq 0 ]]; then
+    log_info "✓ Bucket existiert bereits: $S3_BUCKET"
     # Optional: Versionierung sicherstellen, falls gewünscht
     if [[ "${ENABLE_VERSIONING,,}" == "true" ]]; then
-      aws s3api put-bucket-versioning --bucket "$S3_BUCKET" --versioning-configuration Status=Enabled $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1 || true
-    fi
-    return 0
-  fi
-  if [[ "${AUTO_CREATE_BUCKET,,}" == "true" ]]; then
-    log_warn "Bucket not found. Attempting to create: $S3_BUCKET"
-    if aws s3 mb "s3://$S3_BUCKET" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1; then
-      log_info "Bucket created: $S3_BUCKET"
-      if [[ "${ENABLE_VERSIONING,,}" == "true" ]]; then
-        aws s3api put-bucket-versioning --bucket "$S3_BUCKET" --versioning-configuration Status=Enabled $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG >/dev/null 2>&1 || true
+      log_info "Aktiviere Versionierung für Bucket..."
+      versioning_output=$(aws s3api put-bucket-versioning --bucket "$S3_BUCKET" --versioning-configuration Status=Enabled $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG 2>&1)
+      if [[ $? -eq 0 ]]; then
+        log_info "✓ Versionierung aktiviert"
+      else
+        log_warn "Versionierung konnte nicht aktiviert werden: $versioning_output"
       fi
-      return 0
     fi
+    log_info "=== BUCKET DEBUG ENDE ==="
+    return 0
+  else
+    log_warn "✗ Bucket existiert nicht oder Zugriff verweigert"
+    log_warn "AWS CLI Ausgabe: $bucket_check_output"
   fi
-  log_err "Bucket does not exist or could not be created: $S3_BUCKET"
+  
+  # Test 2: Bucket erstellen (falls AUTO_CREATE_BUCKET aktiv)
+  if [[ "${AUTO_CREATE_BUCKET,,}" == "true" ]]; then
+    log_warn "Bucket nicht gefunden. Versuche zu erstellen: '$S3_BUCKET'"
+    
+    # Test AWS CLI Konnektivität zuerst
+    log_info "Teste AWS CLI Konnektivität zum Endpoint..."
+    if [[ -n "$S3_ENDPOINT_URL" ]]; then
+      connectivity_test=$(curl -s --connect-timeout 10 "$S3_ENDPOINT_URL" 2>&1 || echo "FAILED")
+      if [[ "$connectivity_test" == "FAILED" ]]; then
+        log_err "✗ Kann Endpoint nicht erreichen: $S3_ENDPOINT_URL"
+        log_err "Netzwerk-Problem oder falscher Endpoint?"
+      else
+        log_info "✓ Endpoint ist erreichbar: $S3_ENDPOINT_URL"
+      fi
+    fi
+    
+    # Versuche Bucket zu erstellen
+    create_output=$(aws s3 mb "s3://$S3_BUCKET" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG 2>&1)
+    create_exit_code=$?
+    
+    log_info "Bucket-Creation Exit Code: $create_exit_code"
+    log_info "AWS CLI Create Output: $create_output"
+    
+    if [[ $create_exit_code -eq 0 ]]; then
+      log_info "✓ Bucket erfolgreich erstellt: $S3_BUCKET"
+      if [[ "${ENABLE_VERSIONING,,}" == "true" ]]; then
+        log_info "Aktiviere Versionierung für neuen Bucket..."
+        versioning_output=$(aws s3api put-bucket-versioning --bucket "$S3_BUCKET" --versioning-configuration Status=Enabled $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG 2>&1)
+        if [[ $? -eq 0 ]]; then
+          log_info "✓ Versionierung aktiviert"
+        else
+          log_warn "Versionierung konnte nicht aktiviert werden: $versioning_output"
+        fi
+      fi
+      log_info "=== BUCKET DEBUG ENDE ==="
+      return 0
+    else
+      log_err "✗ Bucket-Erstellung fehlgeschlagen!"
+      log_err "Mögliche Ursachen:"
+      log_err "  - Bucket-Name bereits von anderem User belegt"
+      log_err "  - Keine Berechtigung zum Erstellen von Buckets"
+      log_err "  - Ungültiger Bucket-Name (Leerzeichen, Großbuchstaben, etc.)"
+      log_err "  - Falsche AWS Credentials oder Endpoint"
+      log_err "  - Netzwerk-Problem"
+    fi
+  else
+    log_info "AUTO_CREATE_BUCKET ist deaktiviert - erstelle Bucket nicht automatisch"
+  fi
+  
+  log_err "Bucket existiert nicht oder konnte nicht erstellt werden: '$S3_BUCKET'"
+  log_err "LÖSUNG: Erstelle den Bucket manuell in deinem S3-Provider oder"
+  log_err "         ändere den Bucket-Namen (keine Leerzeichen/Großbuchstaben)"
+  log_info "=== BUCKET DEBUG ENDE ==="
   return 1
 }
 
