@@ -4,10 +4,13 @@ echo
 
 # Gesamten Request-Body lesen (robust auch ohne Newline)
 # Body robust lesen (CGI: bevorzugt CONTENT_LENGTH)
-if [ -n "${CONTENT_LENGTH:-}" ] 2>/dev/null; then
+echo "DEBUG: CONTENT_LENGTH='${CONTENT_LENGTH:-}'" >&2
+if [ -n "${CONTENT_LENGTH:-}" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
   body="$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)"
+  echo "DEBUG: Body via dd: '$body'" >&2
 else
   body="$(cat)"
+  echo "DEBUG: Body via cat: '$body'" >&2
 fi
 
 # Sicherstellen dass das data-Verzeichnis existiert und die richtigen Permissions hat
@@ -23,9 +26,15 @@ base='{}'
 
 # Eingehenden JSON-Body validieren
 incoming="${body:-{}}"
+echo "DEBUG: Raw body: '$body'" >&2
+echo "DEBUG: Incoming: '$incoming'" >&2
+
 # Bei ungültigem JSON: wie leeres Objekt behandeln (robuster gegen Transport-Besonderheiten)
-if ! printf '%s' "$incoming" | jq -e '.' >/dev/null 2>&1; then
+if printf '%s' "$incoming" | jq -e '.' >/dev/null 2>&1; then
+  echo "DEBUG: JSON is VALID" >&2
+else
   echo "DEBUG: Invalid JSON received, using empty object" >&2
+  echo "DEBUG: JQ error output: $(printf '%s' "$incoming" | jq -e '.' 2>&1)" >&2
   incoming='{}'
 fi
 
