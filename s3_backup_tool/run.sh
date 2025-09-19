@@ -195,6 +195,9 @@ url.rewrite-once = (
     "^/api/test-permissions$" => "/cgi-bin/test-permissions.sh",
     "^/api/debug-save-load$" => "/cgi-bin/debug-save-load.sh",
     "^/api/debug-api-calls$" => "/cgi-bin/debug-api-calls.sh",
+    "^/api/get-recent-logs$" => "/cgi-bin/get-recent-logs.sh",
+    "^/api/get-backup-history$" => "/cgi-bin/get-backup-history.sh",
+    "^/api/add-backup-history$" => "/cgi-bin/add-backup-history.sh",
     "^/api/backup-info$" => "/cgi-bin/backup-info.sh",
     "^/api/service$" => "/cgi-bin/service.sh"
 )
@@ -390,14 +393,30 @@ wait_for_backup_file() {
 
 upload_to_s3() {
   local path="$1"
-  local filename key
+  local filename key start_time end_time duration size_bytes
   filename=$(basename "$path")
   key="${S3_PREFIX}${filename}"
+  start_time=$(date +%s)
+  
+  # Dateigröße ermitteln
+  size_bytes=$(stat -c %s "$path" 2>/dev/null || stat -f %z "$path" 2>/dev/null || echo 0)
 
-  ensure_bucket_exists || return 1
+  ensure_bucket_exists || {
+    # Backup-History: Failed (Bucket-Problem)
+    add_backup_history "$filename" "s3://$S3_BUCKET/$key" "failed" "$size_bytes" 0 "Bucket does not exist or could not be created"
+    return 1
+  }
+  
   log_info "Uploading to s3://$S3_BUCKET/$key"
   if aws s3 cp "$path" "s3://$S3_BUCKET/$key" $AWS_ENDPOINT_ARG $AWS_REGION_ARG $SSL_ARG "${SSE_ARGS[@]}"; then
-    log_info "Upload finished: s3://$S3_BUCKET/$key"
+    end_time=$(date +%s)
+    duration=$((end_time - start_time))
+    
+    log_info "Upload finished: s3://$S3_BUCKET/$key (${duration}s, $(format_bytes "$size_bytes"))"
+    
+    # Backup-History: Success
+    add_backup_history "$filename" "s3://$S3_BUCKET/$key" "success" "$size_bytes" "$duration" ""
+    
     if [[ "${DELETE_LOCAL_AFTER_UPLOAD,,}" == "true" ]]; then
       if rm -f -- "$path"; then
         log_info "Removed local backup file: $path"
@@ -408,7 +427,14 @@ upload_to_s3() {
     enforce_s3_retention || log_warn "S3 retention could not be fully enforced"
     notify_success "s3://$S3_BUCKET/$key"
   else
+    end_time=$(date +%s)
+    duration=$((end_time - start_time))
+    
     log_err "Upload failed: s3://$S3_BUCKET/$key"
+    
+    # Backup-History: Failed (Upload-Problem)  
+    add_backup_history "$filename" "s3://$S3_BUCKET/$key" "failed" "$size_bytes" "$duration" "Upload failed - check credentials and network"
+    
     notify_failure "s3://$S3_BUCKET/$key"
     return 1
   fi
@@ -522,6 +548,54 @@ ensure_bucket_exists() {
   log_err "         ändere den Bucket-Namen (keine Leerzeichen/Großbuchstaben)"
   log_info "=== BUCKET DEBUG ENDE ==="
   return 1
+}
+
+# Helper-Funktion: Backup-History hinzufügen
+add_backup_history() {
+  local filename="$1"
+  local s3_key="$2" 
+  local status="$3"
+  local size_bytes="$4"
+  local duration="$5"
+  local error_message="$6"
+  local timestamp
+  
+  timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  
+  # JSON für API-Call erstellen
+  local json_payload
+  json_payload=$(cat << EOF
+{
+  "timestamp": "$timestamp",
+  "filename": "$filename",
+  "s3_key": "$s3_key", 
+  "status": "$status",
+  "size_bytes": $size_bytes,
+  "duration_seconds": $duration,
+  "error_message": "$error_message"
+}
+EOF
+)
+  
+  # API-Call im Hintergrund (non-blocking)
+  (curl -s -X POST -H "Content-Type: application/json" \
+    -d "$json_payload" \
+    "http://localhost:8099/api/add-backup-history" >/dev/null 2>&1 &)
+}
+
+# Helper-Funktion: Bytes formatieren
+format_bytes() {
+  local bytes="$1"
+  local units=("B" "KB" "MB" "GB" "TB")
+  local unit=0
+  local size="$bytes"
+  
+  while [[ $size -gt 1024 && $unit -lt 4 ]]; do
+    size=$((size / 1024))
+    unit=$((unit + 1))
+  done
+  
+  echo "${size}${units[$unit]}"
 }
 
 enforce_s3_retention() {

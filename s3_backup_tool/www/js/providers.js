@@ -1,3 +1,53 @@
+// Helper-Funktion: S3-Bucket-Namen automatisch formatieren 
+function formatS3BucketName(input) {
+  if (!input || typeof input !== 'string') return '';
+  
+  let formatted = input
+    // Schritt 1: Zu Kleinbuchstaben
+    .toLowerCase()
+    // Schritt 2: Leerzeichen durch Bindestriche ersetzen
+    .replace(/\s+/g, '-')
+    // Schritt 3: Mehrfache Bindestriche zu einem reduzieren
+    .replace(/-+/g, '-')
+    // Schritt 4: Nur erlaubte Zeichen behalten (a-z, 0-9, ., -, _)
+    .replace(/[^a-z0-9.\-_]/g, '')
+    // Schritt 5: Nicht mit Bindestrich beginnen oder enden
+    .replace(/^-+|-+$/g, '')
+    // Schritt 6: Länge begrenzen (3-63 Zeichen für bessere Kompatibilität)
+    .substring(0, 63);
+  
+  // Schritt 7: Mindestens 3 Zeichen, sonst Fallback
+  if (formatted.length < 3) {
+    if (formatted.length > 0) {
+      formatted = formatted + '-bucket'.substring(0, 63 - formatted.length);
+    } else {
+      formatted = 'my-bucket';
+    }
+  }
+  
+  return formatted;
+}
+
+// Helper-Funktion: Zeige Formatierung als Hinweis
+function showBucketNameHint(originalName, formattedName, inputElement) {
+  if (originalName !== formattedName && originalName.length > 0) {
+    const hintElement = inputElement.parentElement.querySelector('.bucket-name-hint') || 
+                       document.createElement('div');
+    hintElement.className = 'bucket-name-hint';
+    hintElement.style.cssText = 'font-size: 12px; color: #888; margin-top: 4px; font-style: italic;';
+    hintElement.innerHTML = `💡 Automatisch formatiert: <code>${formattedName}</code>`;
+    
+    if (!inputElement.parentElement.querySelector('.bucket-name-hint')) {
+      inputElement.parentElement.appendChild(hintElement);
+    }
+  } else {
+    const existingHint = inputElement.parentElement.querySelector('.bucket-name-hint');
+    if (existingHint) {
+      existingHint.remove();
+    }
+  }
+}
+
 function initializeProviders() {
   const providerCards = document.querySelectorAll('.provider-card');
   const capsByProvider = window.capsByProvider = {
@@ -212,9 +262,20 @@ function initializeProviders() {
         const kms = kmsInput ? kmsInput.value.trim() : '';
         const enableVersioning = !!(versioningCheckbox && versioningCheckbox.checked);
 
+        // KRITISCHER FIX: Bucket-Name vor dem Speichern automatisch formatieren
+        const rawBucketName = document.getElementById('bucket-input')?.value || '';
+        const formattedBucketName = formatS3BucketName(rawBucketName);
+        
+        if (rawBucketName !== formattedBucketName && rawBucketName.length > 0) {
+          out(`Bucket-Name beim Speichern automatisch formatiert: "${rawBucketName}" → "${formattedBucketName}"`);
+          // Aktualisiere auch das Input-Feld
+          const bucketInput = document.getElementById('bucket-input');
+          if (bucketInput) bucketInput.value = formattedBucketName;
+        }
+        
         const combined = {
-          // Zugangsdaten
-          s3_bucket: document.getElementById('bucket-input')?.value || '',
+          // Zugangsdaten (mit formatiertem Bucket-Namen)
+          s3_bucket: formattedBucketName,
           access_key_id: document.getElementById('ak-input')?.value || ''
         };
         
@@ -386,6 +447,44 @@ function initializeProviders() {
 
   // Initial laden
   loadOverridesAndPopulate();
+  
+  // S3 Bucket-Name Auto-Formatierung einrichten
+  const bucketInput = document.getElementById('bucket-input');
+  if (bucketInput) {
+    // Ereignis beim Tippen (Echtzeit-Vorschau)
+    bucketInput.addEventListener('input', function(e) {
+      const originalValue = e.target.value;
+      const formattedValue = formatS3BucketName(originalValue);
+      
+      // Zeige Hinweis, aber ändere noch nicht den Wert
+      showBucketNameHint(originalValue, formattedValue, e.target);
+    });
+    
+    // Ereignis beim Verlassen des Feldes (Auto-Korrektur)
+    bucketInput.addEventListener('blur', function(e) {
+      const originalValue = e.target.value;
+      const formattedValue = formatS3BucketName(originalValue);
+      
+      if (originalValue !== formattedValue && originalValue.length > 0) {
+        e.target.value = formattedValue;
+        showBucketNameHint('', '', e.target); // Hinweis entfernen
+        out(`Bucket-Name automatisch formatiert: "${originalValue}" → "${formattedValue}"`);
+      }
+    });
+    
+    // Ereignis beim Einfügen (Paste)
+    bucketInput.addEventListener('paste', function(e) {
+      setTimeout(() => {
+        const originalValue = e.target.value;
+        const formattedValue = formatS3BucketName(originalValue);
+        
+        if (originalValue !== formattedValue) {
+          e.target.value = formattedValue;
+          out(`Eingefügter Bucket-Name automatisch formatiert: "${originalValue}" → "${formattedValue}"`);
+        }
+      }, 10);
+    });
+  }
 }
 
 async function applyProviderSettings() {

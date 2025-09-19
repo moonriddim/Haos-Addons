@@ -471,9 +471,45 @@
                   <button class="btn btn-secondary btn-sm" id="btn-debug-api-calls" title="API-Calls vs Simulation debuggen">
                     🔍 API Debug
                   </button>
+                  <button class="btn btn-secondary btn-sm" id="btn-start-live-logs" title="Live-Logs vom Backend anzeigen">
+                    🔴 Live Logs
+                  </button>
+                  <button class="btn btn-secondary btn-sm" id="btn-stop-live-logs" title="Live-Logging stoppen" style="display:none;">
+                    ⏹️ Stop Logs
+                  </button>
                 </div>
                 <div class="log-container">
                   <pre id="output" class="log"></pre>
+                </div>
+                
+                <!-- Backup-History Sektion -->
+                <div class="backup-history-section" style="margin-top: 20px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="margin: 0; color: #333;">📦 Backup-Historie</h4>
+                    <button class="btn btn-secondary btn-sm" id="btn-refresh-history" title="Backup-Historie aktualisieren">
+                      🔄 Aktualisieren
+                    </button>
+                  </div>
+                  <div class="backup-history-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+                    <table class="backup-history-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                      <thead style="background: #f5f5f5; position: sticky; top: 0;">
+                        <tr>
+                          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Status</th>
+                          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Datei</th>
+                          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Datum</th>
+                          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Größe</th>
+                          <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Dauer</th>
+                        </tr>
+                      </thead>
+                      <tbody id="backup-history-tbody">
+                        <tr>
+                          <td colspan="5" style="padding: 20px; text-align: center; color: #888;">
+                            Lade Historie...
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
