@@ -37,9 +37,14 @@ if [ -f "$db" ]; then
     else
       result="$result\"db_access\":\"ok\",\"entry_count\":$count,"
       
-      # Zeige alle Keys 
-      keys=$(sqlite3 -separator "," "$db" "SELECT key FROM kv;" 2>/dev/null || echo "")
-      result="$result\"keys\":[$(echo "$keys" | sed 's/^/"/;s/$/"/;s/,/","/g')],"
+      # Zeige alle Keys (fix JSON array formatting)
+      keys=$(sqlite3 "$db" "SELECT key FROM kv;" 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo "")
+      if [ -n "$keys" ]; then
+        formatted_keys=$(echo "$keys" | sed 's/,/","/g;s/^/"/;s/$/"/')
+        result="$result\"keys\":[$formatted_keys],"
+      else
+        result="$result\"keys\":[],"
+      fi
     fi
   fi
 else
