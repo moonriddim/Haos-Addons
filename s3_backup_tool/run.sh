@@ -139,8 +139,6 @@ echo "$SUPERVISOR_TOKEN" > /tmp/supervisor_token
 chmod 600 /tmp/supervisor_token
 
 # Sicherstellen dass CGI-Scripts ausführbar sind
-# Normalize line endings and ensure executables
-find /www -type f -name "*.sh" -exec dos2unix -q {} +
 find /www -name "*.sh" -exec chmod +x {} +
 
 # HTTP-UI früh starten, damit Ingress/Frontend erreichbar ist
@@ -179,10 +177,6 @@ url.rewrite-once = (
   "^/api/backup$" => "/cgi-bin/backup.sh",
   "^/api/list$" => "/cgi-bin/list.sh",
   "^/api/list-s3$" => "/cgi-bin/list-s3.sh",
-  "^/api/ping$" => "/cgi-bin/ping.sh",
-  "^/api/lighttpd-error$" => "/cgi-bin/lighttpd-error.sh",
-  "^/api/create-backup$" => "/cgi-bin/create-backup.sh",
-  "^/api/addons$" => "/cgi-bin/addons.sh",
   "^/api/restore-local$" => "/cgi-bin/restore-local.sh",
   "^/api/restore-s3$" => "/cgi-bin/restore-s3.sh",
   "^/api/upload$" => "/cgi-bin/upload.sh",
@@ -795,7 +789,6 @@ start_http_ui() {
   chmod 600 /tmp/supervisor_token
   
   # Sicherstellen dass CGI-Scripts ausführbar sind
-  find /www -type f -name "*.sh" -exec dos2unix -q {} +
   find /www -name "*.sh" -exec chmod +x {} +
   
   port="$(bashio::addon.ingress_port 2>/dev/null || true)"
