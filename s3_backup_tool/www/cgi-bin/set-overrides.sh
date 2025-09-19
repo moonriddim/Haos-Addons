@@ -33,10 +33,10 @@ if command -v sqlite3 >/dev/null 2>&1; then
     v=$(printf '%s' "$incoming" | jq -c --arg k "$k" '.[$k]' 2>/dev/null)
     # Nur nicht-leere Werte schreiben (wie oben)
     if printf '%s' "$v" | jq -e 'if type=="string" then .!="" else .!=null end' >/dev/null 2>&1; then
-      sqlite3 "$db" "INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value;" 2>/dev/null <<EOF
-$k
-$v
-EOF
+      # Einfache SQL-Quoting-Regel: single quotes verdoppeln
+      k_esc=$(printf '%s' "$k" | sed "s/'/''/g")
+      v_esc=$(printf '%s' "$v" | sed "s/'/''/g")
+      sqlite3 "$db" "INSERT INTO kv(key,value) VALUES('$k_esc','$v_esc') ON CONFLICT(key) DO UPDATE SET value=excluded.value;" 2>/dev/null || true
     fi
   done
   echo '{"status":"ok"}'

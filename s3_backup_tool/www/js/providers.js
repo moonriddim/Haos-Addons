@@ -118,7 +118,10 @@ function initializeProviders() {
       setLoading(true);
       try {
         const result = await call('api/set-overrides', { body: JSON.stringify(payload) });
-        out(result.body || (result.ok ? 'Backup Einstellungen gespeichert' : 'Fehler beim Speichern'));
+        let msg = '';
+        try { const j = JSON.parse(result.body || '{}'); if (j && j.error) msg = 'Fehler: ' + j.error; } catch (_) {}
+        if (!result.ok || msg) { out(msg || 'Fehler beim Speichern der Backup-Einstellungen'); return; }
+        out('Backup Einstellungen gespeichert');
       } catch (e) {
         out('Fehler: ' + e.message);
       } finally {
@@ -233,7 +236,10 @@ function initializeProviders() {
         combined.retention_keep_last_s3 = document.getElementById('keep-last-input')?.value || null;
         combined.retention_days_s3 = document.getElementById('retention-days-input')?.value || null;
 
-        await call('api/set-overrides', { body: JSON.stringify(combined) });
+        const result = await call('api/set-overrides', { body: JSON.stringify(combined) });
+        let err = '';
+        try { const j = JSON.parse(result.body || '{}'); if (j && j.error) err = j.error; } catch (_) {}
+        if (!result.ok || err) { out('Fehler beim Speichern der Einstellungen: ' + (err || ('HTTP ' + result.status))); return; }
         out('Einstellungen gespeichert');
       } catch (e) {
         out('Fehler beim Speichern der Einstellungen: ' + e.message);
